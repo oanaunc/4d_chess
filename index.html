@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎮 4D Chess - Four-Dimensional Chess Game</title>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/main.css">
+    
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+</head>
+<body>
+    <!-- Header Bar -->
+    <header class="header-bar">
+        <button class="menu-btn" id="menu-btn">☰</button>
+        <h1 class="title">🎮 4D CHESS</h1>
+        <div class="turn-indicator" id="turn-indicator">
+            <span class="turn-icon" id="turn-icon">♔</span>
+            <span class="turn-text" id="turn-text">White to move</span>
+        </div>
+        <div class="check-indicator" id="check-indicator" style="display:none;">
+            <span class="check-text">⚠️ CHECK!</span>
+        </div>
+        <button class="settings-btn" id="settings-btn">⚙️</button>
+    </header>
+
+    <div class="main-container">
+        <!-- Left Panel: Control Panel -->
+        <aside class="control-panel">
+            <!-- Game Status -->
+            <section class="card status-card">
+                <h3>🎯 Game Status</h3>
+                <ul>
+                    <li>Turn: <span id="turn-number">1</span></li>
+                    <li>Player: <span id="current-player">White</span></li>
+                    <li>Status: <span id="check-status">No check</span></li>
+                </ul>
+            </section>
+            
+            <!-- Selected Piece Info -->
+            <section class="card piece-card" id="selected-piece-info" style="display:none;">
+                <h3>📍 Selected Piece</h3>
+                <ul>
+                    <li>Type: <span id="piece-type"></span></li>
+                    <li>Position: <span id="piece-pos"></span></li>
+                    <li>Possible moves: <span id="move-count"></span></li>
+                </ul>
+            </section>
+            
+            <!-- Action Buttons -->
+            <section class="card actions-card">
+                <h3>🎲 Actions</h3>
+                <button class="btn btn-primary btn-large" id="new-game-btn">
+                    🔄 NEW GAME
+                </button>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" id="undo-btn">
+                        ↶ UNDO
+                    </button>
+                    <button class="btn btn-secondary" id="redo-btn">
+                        ↷ REDO
+                    </button>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-secondary" id="save-btn">
+                        💾 SAVE
+                    </button>
+                    <button class="btn btn-secondary" id="load-btn">
+                        📂 LOAD
+                    </button>
+                </div>
+            </section>
+            
+            <!-- Statistics -->
+            <section class="card stats-card">
+                <h3>📊 Statistics</h3>
+                <div class="stat-row">
+                    <span>White pieces:</span>
+                    <span id="white-count" class="stat-value">128</span>
+                </div>
+                <div class="stat-row">
+                    <span>Black pieces:</span>
+                    <span id="black-count" class="stat-value">128</span>
+                </div>
+                <div class="stat-row">
+                    <span>Time elapsed:</span>
+                    <span id="game-time" class="stat-value">00:00</span>
+                </div>
+            </section>
+            
+            <!-- Move History -->
+            <section class="card history-card">
+                <h3>📜 Move History</h3>
+                <div class="move-list" id="move-history">
+                    <div class="move-item">Game started...</div>
+                </div>
+            </section>
+        </aside>
+
+        <!-- Center: Game View -->
+        <main class="game-view">
+            <canvas id="game-canvas"></canvas>
+            
+            <!-- Loading Screen -->
+            <div class="loading-screen" id="loading-screen">
+                <div class="loading-content">
+                    <div class="loading-spinner"></div>
+                    <h2>Loading 4D Chess...</h2>
+                    <p id="loading-text">Initializing hypercube...</p>
+                </div>
+            </div>
+            
+            <!-- Game Over Modal -->
+            <div class="modal" id="game-over-modal" style="display:none;">
+                <div class="modal-content">
+                    <h2 id="game-over-title">Checkmate!</h2>
+                    <p id="game-over-message"></p>
+                    <button class="btn btn-primary" id="new-game-modal-btn">
+                        🔄 New Game
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Panel: Navigation Panel -->
+        <aside class="nav-panel">
+            <section class="card nav-card">
+                <h3>🧭 4D Navigation</h3>
+                
+                <!-- W-axis slider -->
+                <div class="axis-control">
+                    <label>W-axis (4D Dimension)</label>
+                    <input type="range" id="w-slider" min="0" max="7" value="2" class="slider">
+                    <div class="axis-buttons">
+                        <button class="btn-nav" id="w-minus">◄ W-1</button>
+                        <span class="axis-value" id="w-value">2/7</span>
+                        <button class="btn-nav" id="w-plus">W+1 ►</button>
+                    </div>
+                </div>
+                
+                <!-- Y-axis slider -->
+                <div class="axis-control">
+                    <label>Y-axis (Height Layer)</label>
+                    <input type="range" id="y-slider" min="0" max="7" value="0" class="slider">
+                    <div class="axis-buttons">
+                        <button class="btn-nav" id="y-minus">▼ Y-1</button>
+                        <span class="axis-value" id="y-value">0/7</span>
+                        <button class="btn-nav" id="y-plus">Y+1 ▲</button>
+                    </div>
+                </div>
+                
+                <!-- Opacity control -->
+                <div class="axis-control">
+                    <label>Board Opacity</label>
+                    <input type="range" id="opacity-slider" min="0" max="100" value="40" class="slider">
+                    <span class="axis-value" id="opacity-value">40%</span>
+                </div>
+            </section>
+            
+            <section class="card view-card">
+                <h3>🎨 View Options</h3>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="show-grid" checked>
+                    <span>Show Grid</span>
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="highlight-moves" checked>
+                    <span>Highlight Possible Moves</span>
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="show-coords">
+                    <span>Show Coordinates</span>
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="animate-pieces" checked>
+                    <span>Animate Pieces</span>
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="show-all-boards">
+                    <span>Show All Boards</span>
+                </label>
+            </section>
+            
+            <section class="card camera-card">
+                <h3>📷 Camera</h3>
+                <button class="btn btn-secondary btn-block" id="reset-camera">
+                    🎯 Reset View
+                </button>
+                <button class="btn btn-secondary btn-block" id="top-view">
+                    ⬆️ Top View
+                </button>
+                <button class="btn btn-secondary btn-block" id="side-view">
+                    ➡️ Side View
+                </button>
+            </section>
+            
+            <!-- Keyboard Shortcuts Help -->
+            <section class="card help-card">
+                <h3>⌨️ Shortcuts</h3>
+                <div class="shortcut-list">
+                    <div class="shortcut-item">
+                        <span class="key">W/S</span>
+                        <span>Change W-axis</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span class="key">Q/E</span>
+                        <span>Change Y-axis</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span class="key">R</span>
+                        <span>Reset camera</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span class="key">ESC</span>
+                        <span>Deselect piece</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span class="key">Ctrl+Z</span>
+                        <span>Undo</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span class="key">Ctrl+Y</span>
+                        <span>Redo</span>
+                    </div>
+                </div>
+            </section>
+        </aside>
+    </div>
+
+    <!-- Scripts -->
+    <!-- Piece classes (must load before GameBoard) -->
+    <script src="js/pieces/Piece.js?v=3"></script>
+    <script src="js/pieces/Pawn.js?v=3"></script>
+    <script src="js/pieces/Rook.js?v=3"></script>
+    <script src="js/pieces/Bishop.js?v=3"></script>
+    <script src="js/pieces/Knight.js?v=3"></script>
+    <script src="js/pieces/Queen.js?v=3"></script>
+    <script src="js/pieces/King.js?v=3"></script>
+    
+    <!-- Game logic -->
+    <script src="GameBoard.js?v=5"></script>
+    <script src="MoveManager.js?v=2"></script>
+    <script src="Models.js?v=5"></script>
+    
+    <!-- Main application -->
+    <script src="js/main.js?v=2"></script>
+</body>
+</html>
+
