@@ -75,6 +75,46 @@ body {
     background: var(--bg-secondary);
     border-bottom: 2px solid var(--accent-primary);
     box-shadow: 0 4px 20px rgba(0, 212, 255, 0.2);
+    gap: var(--spacing-md);
+}
+
+.game-mode-selector {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+    flex: 1;
+    justify-content: center;
+}
+
+.mode-btn {
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--bg-tertiary);
+    border: 2px solid transparent;
+    border-radius: var(--border-radius);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.mode-btn:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border-color: var(--accent-primary);
+}
+
+.mode-btn.active {
+    background: var(--accent-primary);
+    color: var(--bg-primary);
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
+}
+
+.mode-btn.active:hover {
+    background: var(--accent-secondary);
+    border-color: var(--accent-secondary);
 }
 
 .menu-btn, .settings-btn {

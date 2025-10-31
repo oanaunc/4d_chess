@@ -24,6 +24,17 @@
             <img src="js/graphics/logo_chess.png" alt="4D Chess Logo" class="header-logo">
             4D CHESS
         </h1>
+        <div class="game-mode-selector">
+            <button class="mode-btn active" id="mode-singleplayer" data-mode="singleplayer">
+                Two Players
+            </button>
+            <button class="mode-btn" id="mode-vs-bot" data-mode="vs-bot">
+                vs Bot
+            </button>
+            <button class="mode-btn" id="mode-bot-vs-bot" data-mode="bot-vs-bot">
+                Watch Bots
+            </button>
+        </div>
         <div class="turn-indicator" id="turn-indicator">
             <span class="turn-icon" id="turn-icon">♚</span>
             <span class="turn-text" id="turn-text">White to move</span>
@@ -271,6 +282,9 @@
     
     <!-- Piece movement handler -->
     <script src="js/PieceMovement.js"></script>
+    
+    <!-- Bot AI -->
+    <script src="js/Bot.js"></script>
     
     <!-- Main application -->
     <script src="js/main.js?v=2"></script>

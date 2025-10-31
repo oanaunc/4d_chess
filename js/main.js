@@ -9,6 +9,19 @@ let canvas, loadingScreen;
 
 // Make functions globally available for GameBoard callbacks (will be set after functions are defined)
 
+// Game mode constants
+const GAME_MODES = {
+    SINGLEPLAYER: 'singleplayer',  // Two players, both manual
+    VS_BOT: 'vs-bot',              // Player (white) vs Bot (black)
+    BOT_VS_BOT: 'bot-vs-bot'       // Two bots, watch mode
+};
+
+// Current game mode
+let currentGameMode = GAME_MODES.SINGLEPLAYER;
+
+// Bot move interval (for Bot vs Bot mode)
+let botMoveInterval = null;
+
 // Game mode (local single player for now)
 const LocalMode = {
     move: function(x0, y0, z0, w0, x1, y1, z1, w1, receiving) {
@@ -34,20 +47,25 @@ const LocalMode = {
         const turnTextEl = document.getElementById('turn-text');
         const turnIcon = document.getElementById('turn-icon');
         
-        if (turnTextEl && turnIndicator && turnIcon) {
-            const currentTeam = this.whoseTurn();
-            turnTextEl.textContent = currentTeam === 0 ? 'White to Move' : 'Black to Move';
-            turnIcon.textContent = currentTeam === 0 ? '♔' : '♚';
-            
-            // Update indicator class for styling
-            turnIndicator.classList.remove('white-turn', 'black-turn');
-            if (currentTeam === 0) {
-                turnIndicator.classList.add('white-turn');
-            } else {
-                turnIndicator.classList.add('black-turn');
+            if (turnTextEl && turnIndicator && turnIcon) {
+                const currentTeam = this.whoseTurn();
+                turnTextEl.textContent = currentTeam === 0 ? 'White to Move' : 'Black to Move';
+                turnIcon.textContent = currentTeam === 0 ? '♔' : '♚';
+                
+                // Update indicator class for styling
+                turnIndicator.classList.remove('white-turn', 'black-turn');
+                if (currentTeam === 0) {
+                    turnIndicator.classList.add('white-turn');
+                } else {
+                    turnIndicator.classList.add('black-turn');
+                }
             }
-        }
-    },
+            
+            // Schedule bot move if needed (after UI update)
+            if (typeof scheduleBotMove === 'function') {
+                scheduleBotMove();
+            }
+        },
     undo: function() {
         if (this.moveHistory.undo()) {
             // Undo successful, update UI
@@ -108,13 +126,15 @@ const LocalMode = {
             return "Stalemate! It's a draw!";
         }
         const checked = this.inCheck();
-        if (checked == 0) {
+        const currentTeam = this.whoseTurn();
+        // Only show check for the CURRENT team (whose turn it is)
+        if (checked == 0 && currentTeam == 0) {
             return "White is in check!";
-        } else if (checked == 1) {
+        } else if (checked == 1 && currentTeam == 1) {
             return "Black is in check!";
         }
         
-        return this.whoseTurn() === 0 ? "White to Move" : "Black to Move";
+        return currentTeam === 0 ? "White to Move" : "Black to Move";
     }
 };
 
@@ -164,6 +184,11 @@ const selectionSystem = {
         mesh.material.color.setHex(mesh.material.originalColor);
     }
 };
+
+// Expose selectionSystem globally for bot to use
+if (typeof window !== 'undefined') {
+    window.selectionSystem = selectionSystem;
+}
 
 /* ============================================
    INITIALIZATION
@@ -333,9 +358,9 @@ function executeMove(x0, y0, z0, w0, x1, y1, z1, w1) {
             return;
         }
         
-        // Check if move is legal
-        const possibleMoves = sourcePiece.getPossibleMoves(gameBoard.pieces, x0, y0, z0, w0);
-        const isValidMove = possibleMoves.some(move => 
+        // Check if move is legal (basic validation)
+        let possibleMoves = sourcePiece.getPossibleMoves(gameBoard.pieces, x0, y0, z0, w0);
+        let isValidMove = possibleMoves.some(move => 
             move.x === x1 && move.y === y1 && move.z === z1 && move.w === w1
         );
         if (!isValidMove) {
@@ -347,6 +372,23 @@ function executeMove(x0, y0, z0, w0, x1, y1, z1, w1) {
         const targetPiece = gameBoard.pieces[x1][y1][z1][w1];
         if (targetPiece && targetPiece.type && targetPiece.team === sourcePiece.team) {
             console.error('❌ Cannot capture own piece');
+            return;
+        }
+        
+        // CRITICAL: Filter out illegal moves (moves that leave own king in check)
+        possibleMoves = filterIllegalMoves(
+            gameBoard,
+            x0, y0, z0, w0,
+            possibleMoves,
+            sourcePiece.team
+        );
+        
+        // Check if the selected move is still in the legal moves after filtering
+        isValidMove = possibleMoves.some(move => 
+            move.x === x1 && move.y === y1 && move.z === z1 && move.w === w1
+        );
+        if (!isValidMove) {
+            console.error('❌ Move is illegal - would leave own king in check or does not escape check');
             return;
         }
         
@@ -376,6 +418,9 @@ function executeMove(x0, y0, z0, w0, x1, y1, z1, w1) {
             
             // Check for win condition after move
             checkWinCondition();
+            
+            // Check if bot should move next
+            scheduleBotMove();
         } catch (error) {
             console.error('❌ Error executing move via moveManager:', error);
             success = false;
@@ -637,6 +682,24 @@ function initializeGame() {
                             
                             // Update UI
                             updateStatus('Game ready', 1, 'White', 'No check');
+                            
+                            // Initialize game mode selectability
+                            if (moveManager) {
+                                if (currentGameMode === GAME_MODES.SINGLEPLAYER) {
+                                    moveManager.setSelectability(0, true);
+                                    moveManager.setSelectability(1, true);
+                                } else if (currentGameMode === GAME_MODES.VS_BOT) {
+                                    moveManager.setSelectability(0, true);
+                                    moveManager.setSelectability(1, false);
+                                } else if (currentGameMode === GAME_MODES.BOT_VS_BOT) {
+                                    moveManager.setSelectability(0, false);
+                                    moveManager.setSelectability(1, false);
+                                    // Start bot vs bot after a short delay
+                                    setTimeout(() => {
+                                        startBotVsBot();
+                                    }, 2000);
+                                }
+                            }
                         }, 500);
                     }, 500);
                 }, 1000);
@@ -660,6 +723,15 @@ function updateLoadingText(text) {
    ============================================ */
 
 function setupUIEvents() {
+    // Game mode buttons
+    const modeButtons = document.querySelectorAll('.mode-btn');
+    modeButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const mode = btn.getAttribute('data-mode');
+            setGameMode(mode);
+        });
+    });
+    
     // New Game button
     const newGameBtn = document.getElementById('new-game-btn');
     if (newGameBtn) {
@@ -840,6 +912,9 @@ function setupKeyboardShortcuts() {
 function resetGame() {
     console.log('🔄 Resetting game...');
     
+    // Stop bot moves
+    stopBotMoveInterval();
+    
     // Hide game over modal if it's open
     const gameOverModal = document.getElementById('game-over-modal');
     if (gameOverModal) {
@@ -873,8 +948,27 @@ function resetGame() {
         updateStatus('Game reset', 1, 'White', 'No check');
     }
     
+    // Update selectability based on current game mode
+    if (moveManager) {
+        if (currentGameMode === GAME_MODES.SINGLEPLAYER) {
+            moveManager.setSelectability(0, true);
+            moveManager.setSelectability(1, true);
+        } else if (currentGameMode === GAME_MODES.VS_BOT) {
+            moveManager.setSelectability(0, true);
+            moveManager.setSelectability(1, false);
+        } else if (currentGameMode === GAME_MODES.BOT_VS_BOT) {
+            moveManager.setSelectability(0, false);
+            moveManager.setSelectability(1, false);
+        }
+    }
+    
     // Restart timer
     startGameTimer();
+    
+    // Start bot vs bot if needed
+    if (currentGameMode === GAME_MODES.BOT_VS_BOT) {
+        startBotVsBot();
+    }
 }
 
 function undoMove() {
@@ -1331,6 +1425,66 @@ function updatePieceHover() {
     }
 }
 
+/**
+ * Filter out illegal moves (moves that leave own king in check)
+ * @param {GameBoard} gameBoard - The game board
+ * @param {number} x0, y0, z0, w0 - Source position
+ * @param {Array} possibleMoves - Array of possible moves
+ * @param {number} team - Team making the move
+ * @returns {Array} - Filtered array of legal moves
+ */
+function filterIllegalMoves(gameBoard, x0, y0, z0, w0, possibleMoves, team) {
+    if (!possibleMoves || possibleMoves.length === 0) {
+        return [];
+    }
+    
+    const legalMoves = [];
+    const isInCheck = gameBoard.inCheck(team);
+    
+    for (const move of possibleMoves) {
+        // Simulate the move
+        const sourcePiece = gameBoard.pieces[x0][y0][z0][w0];
+        const targetPiece = gameBoard.pieces[move.x][move.y][move.z][move.w];
+        
+        // Make the move
+        gameBoard.pieces[move.x][move.y][move.z][move.w] = sourcePiece;
+        // Create empty piece (same structure as GameBoard.js createEmptyPiece)
+        gameBoard.pieces[x0][y0][z0][w0] = {
+            type: null,
+            team: null,
+            mesh: null,
+            hasMoved: false,
+            position: {x: 0, y: 0, z: 0, w: 0},
+            getPossibleMoves: function() { return []; }
+        };
+        
+        // Check if move leaves own king in check
+        const stillInCheck = gameBoard.inCheck(team);
+        
+        // Restore board
+        gameBoard.pieces[x0][y0][z0][w0] = sourcePiece;
+        gameBoard.pieces[move.x][move.y][move.z][move.w] = targetPiece;
+        
+        // If in check, only allow moves that get out of check
+        if (isInCheck) {
+            if (!stillInCheck) {
+                // This move gets us out of check - it's legal
+                legalMoves.push(move);
+            }
+            // Otherwise, skip this move (still in check)
+        } else {
+            // Not in check - don't allow moves that put us in check
+            if (!stillInCheck) {
+                legalMoves.push(move);
+            }
+            // Otherwise, skip this move (would leave us in check)
+        }
+    }
+    
+    return legalMoves;
+}
+
+
 function selectPiece(mesh) {
     if (!mesh || !gameBoard) return;
     
@@ -1372,12 +1526,23 @@ function selectPiece(mesh) {
     gameState.selectedPieceData = piece;
     
     // Get possible moves
-    const possibleMoves = piece.getPossibleMoves(
+    let possibleMoves = piece.getPossibleMoves(
         gameBoard.pieces,
         boardCoords.x,
         boardCoords.y,
         boardCoords.z,
         boardCoords.w
+    );
+    
+    // Filter out illegal moves (moves that leave own king in check)
+    possibleMoves = filterIllegalMoves(
+        gameBoard,
+        boardCoords.x,
+        boardCoords.y,
+        boardCoords.z,
+        boardCoords.w,
+        possibleMoves,
+        piece.team
     );
     
     gameState.possibleMoves = possibleMoves;
@@ -1392,7 +1557,7 @@ function selectPiece(mesh) {
     // Update piece info display in Game Status
     updatePieceInfoDisplay(piece, boardCoords, possibleMoves);
     
-    console.log(`✅ Selected ${piece.type} at (${boardCoords.x},${boardCoords.y},${boardCoords.z},${boardCoords.w}), ${possibleMoves.length} possible moves`);
+    console.log(`✅ Selected ${piece.type} at (${boardCoords.x},${boardCoords.y},${boardCoords.z},${boardCoords.w}), ${possibleMoves.length} legal moves`);
 }
 
 function deselectPiece() {
@@ -1482,19 +1647,119 @@ function checkWinCondition() {
         modalTitle.textContent = 'Checkmate!';
         modalMessage.textContent = 'White wins the game!';
         modal.style.display = 'flex';
+        stopBotMoveInterval(); // Stop bot moves if game is over
     } else if (winStatus === 1) {
         // Black wins
         modalTitle.textContent = 'Checkmate!';
         modalMessage.textContent = 'Black wins the game!';
         modal.style.display = 'flex';
+        stopBotMoveInterval(); // Stop bot moves if game is over
     } else if (winStatus === 2) {
         // Stalemate
         modalTitle.textContent = 'Stalemate!';
         modalMessage.textContent = 'The game ends in a draw.';
         modal.style.display = 'flex';
+        stopBotMoveInterval(); // Stop bot moves if game is over
     } else {
         // Game continues
         modal.style.display = 'none';
+    }
+}
+
+function setGameMode(mode) {
+    console.log(`🎮 Switching to game mode: ${mode}`);
+    
+    // Stop any running bot interval
+    stopBotMoveInterval();
+    
+    // Update current mode
+    currentGameMode = mode;
+    
+    // Update button states
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+        if (btn.getAttribute('data-mode') === mode) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    // Update piece selectability based on mode
+    if (moveManager) {
+        if (mode === GAME_MODES.SINGLEPLAYER) {
+            // Both teams can be selected manually
+            moveManager.setSelectability(0, true);
+            moveManager.setSelectability(1, true);
+        } else if (mode === GAME_MODES.VS_BOT) {
+            // Only white (player) can be selected, black is bot
+            moveManager.setSelectability(0, true);
+            moveManager.setSelectability(1, false);
+        } else if (mode === GAME_MODES.BOT_VS_BOT) {
+            // Neither team can be selected (both are bots)
+            moveManager.setSelectability(0, false);
+            moveManager.setSelectability(1, false);
+        }
+    }
+    
+    // Deselect current piece
+    deselectPiece();
+    
+    // Start bot vs bot if needed
+    if (mode === GAME_MODES.BOT_VS_BOT && gameBoard && moveManager) {
+        startBotVsBot();
+    }
+}
+
+function scheduleBotMove() {
+    // Clear any pending bot move
+    if (botMoveInterval) {
+        clearTimeout(botMoveInterval);
+        botMoveInterval = null;
+    }
+    
+    // Check if bot should move
+    if (!gameBoard || !moveManager) return;
+    
+    const currentTeam = moveManager.whoseTurn();
+    const winStatus = gameBoard.winCondition();
+    
+    // Don't schedule if game is over
+    if (winStatus !== -1) return;
+    
+    // Check if current team should be controlled by bot
+    let shouldBotMove = false;
+    
+    if (currentGameMode === GAME_MODES.VS_BOT) {
+        // Bot plays black (team 1), player plays white (team 0)
+        shouldBotMove = (currentTeam === 1);
+    } else if (currentGameMode === GAME_MODES.BOT_VS_BOT) {
+        // Both teams are bots
+        shouldBotMove = true;
+    }
+    
+    if (shouldBotMove && Bot) {
+        // Schedule bot move after a short delay (to allow animation to complete)
+        botMoveInterval = setTimeout(() => {
+            // Bot.makeMove now returns a Promise and includes visual feedback
+            Bot.makeMove(gameBoard, moveManager, currentTeam).then((success) => {
+                if (success) {
+                    // Bot move completed, will check again after move completes
+                }
+            });
+        }, 1500); // 1.5 second delay for visual effect
+    }
+}
+
+function startBotVsBot() {
+    console.log('🤖 Starting Bot vs Bot mode');
+    // First move will be scheduled by scheduleBotMove after setup
+    scheduleBotMove();
+}
+
+function stopBotMoveInterval() {
+    if (botMoveInterval) {
+        clearTimeout(botMoveInterval);
+        botMoveInterval = null;
     }
 }
 
