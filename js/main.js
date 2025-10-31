@@ -984,6 +984,9 @@ function selectPiece(mesh) {
         gameBoard.graphics.hidePossibleMoves();
     }
     
+    // Update piece info display in Game Status
+    updatePieceInfoDisplay(piece, boardCoords, possibleMoves);
+    
     console.log(`✅ Selected ${piece.type} at (${boardCoords.x},${boardCoords.y},${boardCoords.z},${boardCoords.w}), ${possibleMoves.length} possible moves`);
 }
 
@@ -995,6 +998,60 @@ function deselectPiece() {
         gameState.selectedPieceData = null;
         gameState.possibleMoves = null;
         gameBoard.graphics.hidePossibleMoves();
+    }
+    
+    // Hide piece info display
+    hidePieceInfoDisplay();
+}
+
+function updatePieceInfoDisplay(piece, position, possibleMoves) {
+    const container = document.getElementById('piece-info-container');
+    if (!container) return;
+    
+    // Show container
+    container.style.display = 'flex';
+    
+    // Update piece name
+    const pieceName = document.getElementById('piece-info-name');
+    if (pieceName) {
+        const teamName = piece.team === 0 ? 'White' : 'Black';
+        const typeName = piece.type.charAt(0).toUpperCase() + piece.type.slice(1);
+        pieceName.textContent = `${teamName} ${typeName}`;
+    }
+    
+    // Update position
+    document.getElementById('piece-info-x').textContent = position.x;
+    document.getElementById('piece-info-y').textContent = position.y;
+    document.getElementById('piece-info-z').textContent = position.z;
+    document.getElementById('piece-info-w').textContent = position.w;
+    
+    // Update moves list
+    const movesList = document.getElementById('piece-info-moves-list');
+    if (movesList && possibleMoves) {
+        movesList.innerHTML = '';
+        
+        if (possibleMoves.length === 0) {
+            const emptyItem = document.createElement('div');
+            emptyItem.className = 'piece-move-item';
+            emptyItem.textContent = 'No moves available';
+            emptyItem.style.color = 'var(--text-tertiary)';
+            movesList.appendChild(emptyItem);
+        } else {
+            possibleMoves.forEach(move => {
+                const moveItem = document.createElement('div');
+                moveItem.className = 'piece-move-item' + (move.possibleCapture ? ' capture' : '');
+                const captureMarker = move.possibleCapture ? ' [capture]' : '';
+                moveItem.textContent = `(${move.x}, ${move.y}, ${move.z}, ${move.w})${captureMarker}`;
+                movesList.appendChild(moveItem);
+            });
+        }
+    }
+}
+
+function hidePieceInfoDisplay() {
+    const container = document.getElementById('piece-info-container');
+    if (container) {
+        container.style.display = 'none';
     }
 }
 

@@ -465,6 +465,109 @@ body {
 }
 
 /* ============================================
+   PIECE INFO CONTAINER
+   ============================================ */
+
+.piece-info-container {
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--accent-primary);
+    border-radius: var(--border-radius);
+    max-height: 400px;
+    display: flex;
+    flex-direction: column;
+}
+
+.piece-info-header {
+    margin-bottom: var(--spacing-sm);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--bg-secondary);
+    color: var(--accent-primary);
+    font-size: 16px;
+}
+
+.piece-info-position {
+    margin-bottom: var(--spacing-md);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-family: 'Courier New', monospace;
+    line-height: 1.6;
+}
+
+.piece-info-position .position-label {
+    margin-bottom: 4px;
+    color: var(--text-secondary);
+}
+
+.piece-info-position .position-coords {
+    font-family: 'Courier New', monospace;
+}
+
+.piece-info-position .coord-item {
+    color: var(--text-secondary);
+    margin-right: 8px;
+}
+
+.piece-info-position .coord-item span {
+    color: var(--accent-primary);
+    font-weight: bold;
+    margin-left: 2px;
+}
+
+.piece-info-moves-header {
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.piece-info-moves-list {
+    overflow-y: auto;
+    max-height: 250px;
+    padding-right: var(--spacing-sm);
+}
+
+.piece-info-moves-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.piece-info-moves-list::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+    border-radius: 3px;
+}
+
+.piece-info-moves-list::-webkit-scrollbar-thumb {
+    background: var(--accent-primary);
+    border-radius: 3px;
+}
+
+.piece-info-moves-list::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-secondary);
+}
+
+.piece-move-item {
+    padding: 4px var(--spacing-sm);
+    margin-bottom: 4px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: 'Courier New', monospace;
+    color: var(--text-secondary);
+    border-left: 2px solid var(--accent-primary);
+}
+
+.piece-move-item.capture {
+    border-left-color: var(--accent-danger);
+    background: rgba(255, 51, 102, 0.1);
+}
+
+.piece-move-item:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+/* ============================================
    TUTORIAL SECTION
    ============================================ */
 

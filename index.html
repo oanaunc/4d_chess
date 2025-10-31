@@ -38,6 +38,25 @@
                     <li>Player: <span id="current-player">White</span></li>
                     <li>Status: <span id="check-status">No check</span></li>
                 </ul>
+                
+                <!-- Selected Piece Info Display -->
+                <div class="piece-info-container" id="piece-info-container" style="display: none;">
+                    <div class="piece-info-header">
+                        <strong id="piece-info-name">-</strong>
+                    </div>
+                    <div class="piece-info-position">
+                        <div class="position-label">Position:</div>
+                        <div class="position-coords">
+                            <span class="coord-item">X:<span id="piece-info-x">-</span></span>, <span class="coord-item">Y:<span id="piece-info-y">-</span></span>, <span class="coord-item">Z:<span id="piece-info-z">-</span></span>, <span class="coord-item">W:<span id="piece-info-w">-</span></span>
+                        </div>
+                    </div>
+                    <div class="piece-info-moves-header">
+                        <strong>Possible Moves:</strong>
+                    </div>
+                    <div class="piece-info-moves-list" id="piece-info-moves-list">
+                        <!-- Moves will be populated by JavaScript -->
+                    </div>
+                </div>
             </section>
             
             <!-- Selected Piece Info -->
