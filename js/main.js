@@ -10,26 +10,80 @@ let canvas, loadingScreen;
 // Game mode (local single player for now)
 const LocalMode = {
     move: function(x0, y0, z0, w0, x1, y1, z1, w1, receiving) {
-        // Simple local move (no validation yet)
-        console.log(`Move: (${x0},${y0},${z0},${w0}) → (${x1},${y1},${z1},${w1})`);
+        // Execute the move on the board
+        const metaData = this.gameBoard.move(x0, y0, z0, w0, x1, y1, z1, w1);
+        
+        // Add move to history (this updates turn counter)
+        this.moveHistory.add(x0, y0, z0, w0, x1, y1, z1, w1, metaData);
+        
+        // Update move history UI
+        if (typeof addMoveToHistory === 'function') {
+            addMoveToHistory(this, x0, y0, z0, w0, x1, y1, z1, w1, metaData);
+        }
+        
+        // Update piece selectability based on whose turn it is
+        this.updateSelectability();
+        
+        // Update UI (status display)
+        this.updateUI();
     },
     undo: function() {
-        console.log('Undo move');
+        if (this.moveHistory.undo()) {
+            // Undo successful, update UI
+            this.updateSelectability();
+            this.updateUI();
+            if (typeof updateMoveHistoryDisplay === 'function') {
+                updateMoveHistoryDisplay(this);
+            }
+            
+            // Update piece counts
+            if (typeof updatePieceCounts === 'function') {
+                updatePieceCounts();
+            }
+        }
     },
     redo: function() {
-        console.log('Redo move');
+        if (this.moveHistory.redo()) {
+            // Redo successful, update UI
+            this.updateSelectability();
+            this.updateUI();
+            if (typeof updateMoveHistoryDisplay === 'function') {
+                updateMoveHistoryDisplay(this);
+            }
+            
+            // Update piece counts
+            if (typeof updatePieceCounts === 'function') {
+                updatePieceCounts();
+            }
+        }
     },
     canMove: function(team) {
-        return true; // For now, allow all moves
+        // Only allow the current team to move
+        return this.whoseTurn() === team;
     },
     updateSelectability: function() {
-        // Enable selectability for current team
+        // Enable selectability for current team only
         const currentTeam = this.whoseTurn();
         this.setSelectability(0, currentTeam === 0);
         this.setSelectability(1, currentTeam === 1);
     },
     moveStatus: function() {
-        return `Turn ${this.currTurn()}: ${this.whoseTurnViewed() === 0 ? 'White' : 'Black'} to move`;
+        const winStatus = this.winCondition();
+        if (winStatus == 0) {
+            return "Checkmate! White wins!";
+        } else if (winStatus == 1) {
+            return "Checkmate! Black wins!";
+        } else if (winStatus == 2) {
+            return "Stalemate! It's a draw!";
+        }
+        const checked = this.inCheck();
+        if (checked == 0) {
+            return "White is in check!";
+        } else if (checked == 1) {
+            return "Black is in check!";
+        }
+        
+        return this.whoseTurn() === 0 ? "White to Move" : "Black to Move";
     }
 };
 
@@ -205,9 +259,127 @@ function setupPieceSelection() {
 function executeMove(x0, y0, z0, w0, x1, y1, z1, w1) {
     console.log(`🎯 Executing move: (${x0},${y0},${z0},${w0}) → (${x1},${y1},${z1},${w1})`);
     
-    // TODO: Validate move and update game state
-    // For now, just log and deselect
-    deselectPiece();
+    if (!gameBoard || !PieceMovement) {
+        console.error('❌ Cannot execute move: gameBoard or PieceMovement not available');
+        deselectPiece();
+        return;
+    }
+    
+    // Get current team (if moveManager exists)
+    let currentTeam = null;
+    if (moveManager && typeof moveManager.whoseTurn === 'function') {
+        currentTeam = moveManager.whoseTurn();
+    }
+    
+    // Execute move using moveManager (which handles turn tracking and history)
+    // OR fall back to PieceMovement if moveManager doesn't exist
+    let success = false;
+    
+    if (moveManager && typeof moveManager.move === 'function') {
+        // Validate move first (without executing)
+        const sourcePiece = gameBoard.pieces[x0][y0][z0][w0];
+        if (!sourcePiece || !sourcePiece.type) {
+            console.error('❌ No piece at source position');
+            return;
+        }
+        
+        // Check if it's the current player's turn
+        if (currentTeam !== null && sourcePiece.team !== currentTeam) {
+            console.error(`❌ Not your turn (piece is team ${sourcePiece.team}, current team is ${currentTeam})`);
+            return;
+        }
+        
+        // Check if move is legal
+        const possibleMoves = sourcePiece.getPossibleMoves(gameBoard.pieces, x0, y0, z0, w0);
+        const isValidMove = possibleMoves.some(move => 
+            move.x === x1 && move.y === y1 && move.z === z1 && move.w === w1
+        );
+        if (!isValidMove) {
+            console.error('❌ Move not in possible moves list');
+            return;
+        }
+        
+        // Check if trying to capture own piece
+        const targetPiece = gameBoard.pieces[x1][y1][z1][w1];
+        if (targetPiece && targetPiece.type && targetPiece.team === sourcePiece.team) {
+            console.error('❌ Cannot capture own piece');
+            return;
+        }
+        
+        // Use moveManager to handle the move (this will call gameBoard.move internally)
+        try {
+            moveManager.move(x0, y0, z0, w0, x1, y1, z1, w1);
+            success = true;
+            
+            // Move completed - deselect piece and update UI
+            console.log('✅ Move completed via moveManager');
+            
+            // Deselect piece first (removes blue highlight)
+            deselectPiece();
+            
+            // Update piece counts
+            if (gameBoard && gameBoard.pieces) {
+                updatePieceCounts();
+            }
+            
+            // Update move history display
+            if (moveManager && typeof updateMoveHistoryDisplay === 'function') {
+                updateMoveHistoryDisplay(moveManager);
+            }
+            
+            // Note: moveManager.move() already calls updateUI() at the end,
+            // which updates the turn-text, turn-icon, turn-number, current-player, etc.
+        } catch (error) {
+            console.error('❌ Error executing move via moveManager:', error);
+            success = false;
+        }
+    } else {
+        // Fallback: Use PieceMovement directly (without turn management)
+        success = PieceMovement.executeMove(
+            gameBoard,
+            x0, y0, z0, w0,
+            x1, y1, z1, w1,
+            function(metadata) {
+                console.log('✅ Move completed with metadata:', metadata);
+                deselectPiece();
+                if (gameBoard && gameBoard.pieces) {
+                    updatePieceCounts();
+                }
+            },
+            currentTeam
+        );
+    }
+    
+    if (!success) {
+        console.warn('⚠️ Move execution failed');
+        // Don't deselect on failed move - let user try again
+    }
+}
+
+function updatePieceCounts() {
+    if (!gameBoard || !gameBoard.pieces) return;
+    
+    let whiteCount = 0;
+    let blackCount = 0;
+    
+    for (let x = 0; x < gameBoard.n; x++) {
+        for (let y = 0; y < gameBoard.n; y++) {
+            for (let z = 0; z < gameBoard.n; z++) {
+                for (let w = 0; w < gameBoard.n; w++) {
+                    const piece = gameBoard.pieces[x][y][z][w];
+                    if (piece && piece.type) {
+                        if (piece.team === 0) whiteCount++;
+                        else if (piece.team === 1) blackCount++;
+                    }
+                }
+            }
+        }
+    }
+    
+    const whiteCountEl = document.getElementById('white-count');
+    const blackCountEl = document.getElementById('black-count');
+    if (whiteCountEl) whiteCountEl.textContent = whiteCount;
+    if (blackCountEl) blackCountEl.textContent = blackCount;
 }
 
 /* ============================================
@@ -342,6 +514,14 @@ function initializeGame() {
                     // Create move manager
                     moveManager = new MoveManager(gameBoard, 0, LocalMode);
                     
+                    // Initialize move history display
+                    if (typeof updateMoveHistoryDisplay === 'function') {
+                        updateMoveHistoryDisplay(moveManager);
+                    }
+                    
+                    // Start game timer
+                    startGameTimer();
+                    
                     // Position camera based on actual board center (like the example game does!)
                     const boardCenter = gameBoard.graphics.getCenter();
                     console.log('📐 Board center calculated:', {
@@ -434,11 +614,38 @@ function updateLoadingText(text) {
 
 function setupUIEvents() {
     // New Game button
-    document.getElementById('new-game-btn').addEventListener('click', () => {
-        if (confirm('Start a new game? Current game will be lost.')) {
-            resetGame();
-        }
-    });
+    const newGameBtn = document.getElementById('new-game-btn');
+    if (newGameBtn) {
+        newGameBtn.addEventListener('click', () => {
+            if (confirm('Start a new game? Current game will be lost.')) {
+                resetGame();
+            }
+        });
+    }
+    
+    // Undo button (check moveManager at click time)
+    const undoBtn = document.getElementById('undo-btn');
+    if (undoBtn) {
+        undoBtn.addEventListener('click', () => {
+            if (moveManager && typeof moveManager.undo === 'function') {
+                moveManager.undo();
+            } else {
+                console.warn('⚠️ MoveManager not available for undo');
+            }
+        });
+    }
+    
+    // Redo button (check moveManager at click time)
+    const redoBtn = document.getElementById('redo-btn');
+    if (redoBtn) {
+        redoBtn.addEventListener('click', () => {
+            if (moveManager && typeof moveManager.redo === 'function') {
+                moveManager.redo();
+            } else {
+                console.warn('⚠️ MoveManager not available for redo');
+            }
+        });
+    }
     
     document.getElementById('new-game-modal-btn').addEventListener('click', () => {
         resetGame();
@@ -585,11 +792,33 @@ function setupKeyboardShortcuts() {
 
 function resetGame() {
     console.log('🔄 Resetting game...');
-    // TODO: Reset game board
-    // TODO: Reset move history
-    // TODO: Reset UI
-    updateStatus('Game reset', 1, 'White', 'No check');
-    addMoveToHistory('Game reset');
+    
+    // Stop timer
+    stopGameTimer();
+    
+    // Reset game board
+    if (gameBoard) {
+        // Reinitialize pieces
+        gameBoard.pieces = gameBoard.initPieces();
+        gameBoard.initializeStartingPositions();
+    }
+    
+    // Reset move manager
+    if (moveManager) {
+        moveManager = new MoveManager(gameBoard, 0, LocalMode);
+    }
+    
+    // Reset UI
+    if (moveManager) {
+        moveManager.updateUI();
+        updateMoveHistoryDisplay(moveManager);
+        updatePieceCounts();
+    } else {
+        updateStatus('Game reset', 1, 'White', 'No check');
+    }
+    
+    // Restart timer
+    startGameTimer();
 }
 
 function undoMove() {
@@ -612,12 +841,6 @@ function loadGame() {
     console.log('📂 Loading game...');
     // TODO: Implement load
     alert('Load feature coming soon!');
-}
-
-function deselectPiece() {
-    console.log('Deselecting piece...');
-    // TODO: Implement deselect
-    document.getElementById('selected-piece-info').style.display = 'none';
 }
 
 /* ============================================
@@ -710,11 +933,38 @@ function updateStatus(message, turn, player, checkStatus) {
     }
 }
 
-function addMoveToHistory(move) {
+function addMoveToHistory(moveManager, x0, y0, z0, w0, x1, y1, z1, w1, metadata) {
     const historyDiv = document.getElementById('move-history');
+    if (!historyDiv) return;
+    
+    // Get move count (after move was added)
+    const moveCount = moveManager.size();
+    const moveNum = Math.ceil(moveCount / 2);
+    
+    // Get the team that made this move: (moveCount - 1) % 2
+    // Move 0 (white): size = 1, (1-1) % 2 = 0 (white)
+    // Move 1 (black): size = 2, (2-1) % 2 = 1 (black)
+    const moveTeam = (moveCount - 1) % 2;
+    const teamName = moveTeam === 0 ? 'White' : 'Black';
+    const moveText = `${moveNum}. ${teamName}: (${x0},${y0},${z0},${w0}) → (${x1},${y1},${z1},${w1})`;
+    
+    // Clear "Game started..." message if it's the first move
+    if (moveCount === 1 && historyDiv.children.length === 1 && historyDiv.children[0].textContent.includes('Game started')) {
+        historyDiv.innerHTML = '';
+    }
+    
     const moveItem = document.createElement('div');
     moveItem.className = 'move-item';
-    moveItem.textContent = move;
+    moveItem.textContent = moveText;
+    
+    // Add capture indicator if applicable
+    if (metadata && metadata.capturedPiece) {
+        const captureSpan = document.createElement('span');
+        captureSpan.className = 'capture-indicator';
+        captureSpan.textContent = ' [capture]';
+        moveItem.appendChild(captureSpan);
+    }
+    
     historyDiv.appendChild(moveItem);
     
     // Auto-scroll to bottom
@@ -722,8 +972,99 @@ function addMoveToHistory(move) {
 }
 
 function updatePieceCount(white, black) {
-    document.getElementById('white-count').textContent = white;
-    document.getElementById('black-count').textContent = black;
+    const whiteEl = document.getElementById('white-count');
+    const blackEl = document.getElementById('black-count');
+    if (whiteEl) whiteEl.textContent = white;
+    if (blackEl) blackEl.textContent = black;
+}
+
+function updateMoveHistoryDisplay(moveManager) {
+    const historyDiv = document.getElementById('move-history');
+    if (!historyDiv || !moveManager || !moveManager.moveHistory) return;
+    
+    // Clear existing history
+    historyDiv.innerHTML = '';
+    
+    // Get all moves from history
+    const moves = moveManager.moveHistory.toList();
+    
+    if (moves.length === 0) {
+        const emptyItem = document.createElement('div');
+        emptyItem.className = 'move-item';
+        emptyItem.textContent = 'Game started...';
+        historyDiv.appendChild(emptyItem);
+        return;
+    }
+    
+    // Filter out null moves (root node has null move)
+    const validMoves = moves.filter(move => move !== null && move !== undefined && move.x0 !== undefined);
+    
+    if (validMoves.length === 0) {
+        const emptyItem = document.createElement('div');
+        emptyItem.className = 'move-item';
+        emptyItem.textContent = 'Game started...';
+        historyDiv.appendChild(emptyItem);
+        return;
+    }
+    
+    // Display moves up to current position
+    validMoves.forEach((move, index) => {
+        // Skip if move is invalid
+        if (!move || move.x0 === undefined) return;
+        
+        const moveNum = Math.ceil((index + 1) / 2);
+        const team = index % 2 === 0 ? 'White' : 'Black';
+        const moveText = `${moveNum}. ${team}: (${move.x0},${move.y0},${move.z0},${move.w0}) → (${move.x1},${move.y1},${move.z1},${move.w1})`;
+        
+        const moveItem = document.createElement('div');
+        moveItem.className = 'move-item';
+        moveItem.textContent = moveText;
+        
+        if (move.metaData && move.metaData.capturedPiece) {
+            const captureSpan = document.createElement('span');
+            captureSpan.className = 'capture-indicator';
+            captureSpan.textContent = ' [capture]';
+            moveItem.appendChild(captureSpan);
+        }
+        
+        historyDiv.appendChild(moveItem);
+    });
+    
+    // Auto-scroll to bottom
+    historyDiv.scrollTop = historyDiv.scrollHeight;
+}
+
+// Game timer
+let gameStartTime = null;
+let gameTimerInterval = null;
+
+function startGameTimer() {
+    gameStartTime = Date.now();
+    
+    if (gameTimerInterval) {
+        clearInterval(gameTimerInterval);
+    }
+    
+    gameTimerInterval = setInterval(() => {
+        if (gameStartTime) {
+            const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+            const timeEl = document.getElementById('game-time');
+            if (timeEl) {
+                timeEl.textContent = timeStr;
+            }
+        }
+    }, 1000);
+}
+
+function stopGameTimer() {
+    if (gameTimerInterval) {
+        clearInterval(gameTimerInterval);
+        gameTimerInterval = null;
+    }
 }
 
 /* ============================================
@@ -883,7 +1224,10 @@ function animate() {
     // Update 2D gizmo visualization
     update2DGizmo();
     
-    // TODO: Update game animations
+    // Process animation queue (piece movements)
+    if (typeof Animation !== 'undefined' && Animation.processQueue) {
+        Animation.processQueue();
+    }
     
     // Render scene
     renderer.render(scene, camera);
@@ -991,12 +1335,19 @@ function selectPiece(mesh) {
 }
 
 function deselectPiece() {
+    // Unhighlight the selected piece (restore original color)
     if (selectionSystem.selectedPiece) {
         selectionSystem.unhighlight(selectionSystem.selectedPiece);
-        selectionSystem.selectedPiece = null;
-        gameState.selectedPiece = null;
-        gameState.selectedPieceData = null;
-        gameState.possibleMoves = null;
+    }
+    
+    // Clear selection state
+    selectionSystem.selectedPiece = null;
+    gameState.selectedPiece = null;
+    gameState.selectedPieceData = null;
+    gameState.possibleMoves = null;
+    
+    // Hide possible moves visualization
+    if (gameBoard && gameBoard.graphics) {
         gameBoard.graphics.hidePossibleMoves();
     }
     

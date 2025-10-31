@@ -44,9 +44,59 @@ function MoveManager(gameBoard, clientTeam, mode) {
 	}
 	
 	this.updateUI = function() {
-		toolbarProxy.setState({
-			text: this.moveStatus()
-		});
+		// Try to update React UI (if it exists)
+		try {
+			if (typeof window !== 'undefined' && window.toolbarProxy && window.toolbarProxy.setState) {
+				window.toolbarProxy.setState({
+					text: this.moveStatus()
+				});
+			}
+		} catch (e) {
+			// toolbarProxy doesn't exist, ignore
+		}
+		
+		// Update HTML status display
+		const statusText = this.moveStatus();
+		const statusElement = document.getElementById('turn-text');
+		if (statusElement) {
+			statusElement.textContent = statusText;
+		}
+		
+		// Update turn icon
+		const turnIcon = document.getElementById('turn-icon');
+		if (turnIcon) {
+			const currentTeam = this.whoseTurn();
+			turnIcon.textContent = currentTeam === 0 ? '♔' : '♚';
+		}
+		
+		// Update turn number
+		const turnNumber = document.getElementById('turn-number');
+		if (turnNumber) {
+			// Turn number = (move count / 2) + 1, rounded up
+			const moveCount = this.size();
+			const turnNum = Math.floor(moveCount / 2) + 1;
+			turnNumber.textContent = turnNum;
+		}
+		
+		// Update current player
+		const currentPlayer = document.getElementById('current-player');
+		if (currentPlayer) {
+			const team = this.whoseTurn();
+			currentPlayer.textContent = team === 0 ? 'White' : 'Black';
+		}
+		
+		// Update check status
+		const checkStatus = document.getElementById('check-status');
+		if (checkStatus) {
+			const checked = this.inCheck();
+			if (checked === 0) {
+				checkStatus.textContent = 'White in check';
+			} else if (checked === 1) {
+				checkStatus.textContent = 'Black in check';
+			} else {
+				checkStatus.textContent = 'No check';
+			}
+		}
 	}
 	
 	this.currTurn = function() {

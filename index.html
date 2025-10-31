@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4D Chess - Four-Dimensional Chess Game</title>
     
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="js/graphics/logo_chess.png">
+    
     <!-- Styles -->
     <link rel="stylesheet" href="css/main.css">
     
@@ -17,7 +20,10 @@
 <body>
     <!-- Header Bar -->
     <header class="header-bar">
-        <h1 class="title">⚫ 4D CHESS</h1>
+        <h1 class="title">
+            <img src="js/graphics/logo_chess.png" alt="4D Chess Logo" class="header-logo">
+            4D CHESS
+        </h1>
         <div class="turn-indicator" id="turn-indicator">
             <span class="turn-icon" id="turn-icon">♚</span>
             <span class="turn-text" id="turn-text">White to move</span>
@@ -259,6 +265,12 @@
     <script src="GameBoard.js?v=5"></script>
     <script src="MoveManager.js?v=2"></script>
     <script src="Models.js?v=5"></script>
+    
+    <!-- Animation system -->
+    <script src="js/Animation.js"></script>
+    
+    <!-- Piece movement handler -->
+    <script src="js/PieceMovement.js"></script>
     
     <!-- Main application -->
     <script src="js/main.js?v=2"></script>
