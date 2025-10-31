@@ -865,6 +865,8 @@ body {
     padding: var(--spacing-sm);
     background: var(--bg-tertiary);
     border-radius: var(--border-radius);
+    min-height: 50px; /* Ensure it has visible height */
+    display: block !important; /* Force display */
 }
 
 .tutorial-description strong {
@@ -874,6 +876,8 @@ body {
 .tutorial-examples {
     font-size: 11px;
     color: var(--text-tertiary);
+    min-height: 30px; /* Ensure it has visible height */
+    display: block !important; /* Force display */
 }
 
 .tutorial-example {
@@ -1304,4 +1308,3 @@ body {
 .mb-sm { margin-bottom: var(--spacing-sm); }
 .mb-md { margin-bottom: var(--spacing-md); }
 .mb-lg { margin-bottom: var(--spacing-lg); }
-

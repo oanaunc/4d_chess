@@ -720,7 +720,15 @@ function initializeGame() {
                             
                             // Initialize tutorial system now that models are loaded
                             if (typeof initTutorial === 'function') {
-                                initTutorial();
+                                console.log('🎓 Calling initTutorial()...');
+                                try {
+                                    initTutorial();
+                                    console.log('✅ initTutorial() completed');
+                                } catch (error) {
+                                    console.error('❌ Error initializing tutorial:', error);
+                                }
+                            } else {
+                                console.warn('⚠️ initTutorial function not available');
                             }
                             console.log('📐 Board size: 8×8×8×8 = 4,096 positions');
                             

@@ -428,9 +428,6 @@ function initComprehensiveTutorial() {
     const tutorialClose = document.getElementById('tutorial-close');
     const tutorialNavLeft = document.getElementById('tutorial-nav-left');
     const tutorialNavRight = document.getElementById('tutorial-nav-right');
-    const feedbackModal = document.getElementById('feedback-modal');
-    const feedbackCancel = document.getElementById('feedback-cancel');
-    const feedbackSubmit = document.getElementById('feedback-submit');
     
     if (!tutorialBtn || !tutorialModal) {
         console.warn('Tutorial elements not found');
@@ -484,42 +481,11 @@ function initComprehensiveTutorial() {
         }
     });
     
-    // Feedback modal
+    // Feedback button - redirect to Google Form
     if (feedbackBtn) {
         feedbackBtn.addEventListener('click', () => {
-            feedbackModal.style.display = 'flex';
-        });
-    }
-    
-    if (feedbackCancel) {
-        feedbackCancel.addEventListener('click', () => {
-            feedbackModal.style.display = 'none';
-            document.getElementById('feedback-text').value = '';
-        });
-    }
-    
-    if (feedbackSubmit) {
-        feedbackSubmit.addEventListener('click', () => {
-            const feedbackText = document.getElementById('feedback-text').value;
-            if (feedbackText.trim()) {
-                // In a real app, you would send this to a server
-                console.log('Feedback submitted:', feedbackText);
-                alert('Thank you for your feedback! We appreciate your input.');
-                feedbackModal.style.display = 'none';
-                document.getElementById('feedback-text').value = '';
-            } else {
-                alert('Please enter some feedback before submitting.');
-            }
-        });
-    }
-    
-    // Close feedback modal on background click
-    if (feedbackModal) {
-        feedbackModal.addEventListener('click', (e) => {
-            if (e.target === feedbackModal) {
-                feedbackModal.style.display = 'none';
-                document.getElementById('feedback-text').value = '';
-            }
+            // Open Google Form in a new tab
+            window.open('https://forms.gle/cyYeqYzNxeNSHjko6', '_blank');
         });
     }
     
@@ -565,6 +531,7 @@ function updateTutorialDisplay() {
         tutorialContent.appendChild(pageDiv);
     }
 }
+
 
 // Initialize when DOM is ready
 if (typeof window !== 'undefined') {

@@ -180,8 +180,14 @@ let tutorialState = {
    ============================================ */
 
 function initTutorial() {
+    console.log('🎓 Initializing piece tutorial system...');
     const canvas = document.getElementById('tutorial-piece-canvas');
-    if (!canvas) return;
+    if (!canvas) {
+        console.error('❌ Tutorial canvas not found!');
+        return;
+    }
+    
+    console.log('✅ Tutorial canvas found, creating Three.js scene...');
     
     // Create mini Three.js scene for piece viewer
     tutorialState.scene = new THREE.Scene();
@@ -198,6 +204,7 @@ function initTutorial() {
         alpha: false
     });
     tutorialState.renderer.setSize(280, 200);
+    console.log('✅ Tutorial renderer created');
     
     // Simple orbit controls for rotation
     if (typeof THREE.OrbitControls !== 'undefined') {
@@ -220,58 +227,173 @@ function initTutorial() {
     tutorialState.scene.add(directionalLight);
     
     // Setup navigation buttons
-    document.getElementById('tutorial-prev').addEventListener('click', () => {
-        tutorialState.currentPiece = (tutorialState.currentPiece - 1 + 6) % 6;
-        updateTutorialDisplay();
+    const prevBtn = document.getElementById('tutorial-prev');
+    const nextBtn = document.getElementById('tutorial-next');
+    
+    if (prevBtn && nextBtn) {
+        prevBtn.addEventListener('click', () => {
+            tutorialState.currentPiece = (tutorialState.currentPiece - 1 + 6) % 6;
+            updatePieceTutorialDisplay();
+        });
+        
+        nextBtn.addEventListener('click', () => {
+            tutorialState.currentPiece = (tutorialState.currentPiece + 1) % 6;
+            updatePieceTutorialDisplay();
+        });
+    } else {
+        console.warn('⚠️ Tutorial navigation buttons not found');
+    }
+    
+    // Initial display - ALWAYS call this even if buttons are missing
+    console.log('📝 About to call updatePieceTutorialDisplay()...');
+    console.log('📊 Current tutorial state:', {
+        currentPiece: tutorialState.currentPiece,
+        pieceType: tutorialState.pieces[tutorialState.currentPiece],
+        sceneExists: !!tutorialState.scene
     });
     
-    document.getElementById('tutorial-next').addEventListener('click', () => {
-        tutorialState.currentPiece = (tutorialState.currentPiece + 1) % 6;
-        updateTutorialDisplay();
-    });
+    // Use setTimeout to ensure DOM is ready
+    setTimeout(() => {
+        console.log('⏰ Calling updatePieceTutorialDisplay() after delay...');
+        updatePieceTutorialDisplay();
+        console.log('✅ updatePieceTutorialDisplay() completed');
+    }, 100);
     
-    // Initial display
-    updateTutorialDisplay();
+    // Fallback: Try again after a longer delay in case DOM wasn't ready
+    setTimeout(() => {
+        const testEl = document.getElementById('tutorial-piece-name');
+        if (testEl && !testEl.textContent.includes('Rook')) {
+            console.log('🔄 DOM elements ready, retrying updatePieceTutorialDisplay()...');
+            updatePieceTutorialDisplay();
+        }
+    }, 500);
     
     // Start animation loop
+    console.log('🎬 Starting animation loop...');
     animateTutorial();
     
     console.log('✅ Tutorial system initialized');
 }
 
-function updateTutorialDisplay() {
+function updatePieceTutorialDisplay() {
+    console.log('🎯 updatePieceTutorialDisplay() CALLED');
+    
     const pieceType = tutorialState.pieces[tutorialState.currentPiece];
     const data = tutorialData[pieceType];
     
-    if (!data) return;
+    if (!data) {
+        console.warn('⚠️ No tutorial data for piece:', pieceType);
+        return;
+    }
     
-    // Update page number
-    document.getElementById('tutorial-page-number').textContent = tutorialState.currentPiece + 1;
-    
-    // Update piece name
-    document.getElementById('tutorial-piece-name').textContent = data.name;
-    
-    // Update description
-    document.getElementById('tutorial-description').innerHTML = data.description;
-    
-    // Update examples
-    const examplesContainer = document.getElementById('tutorial-examples');
-    examplesContainer.innerHTML = '';
-    data.examples.forEach(example => {
-        const exampleDiv = document.createElement('div');
-        exampleDiv.className = 'tutorial-example';
-        exampleDiv.innerHTML = `
-            <div class="tutorial-example-title">${example.title}</div>
-            <div class="tutorial-example-text">${example.text}</div>
-        `;
-        examplesContainer.appendChild(exampleDiv);
+    console.log('📝 Updating tutorial display for:', pieceType);
+    console.log('📊 Tutorial data available:', {
+        hasName: !!data.name,
+        name: data.name,
+        hasDescription: !!data.description,
+        descriptionLength: data.description ? data.description.length : 0,
+        hasExamples: !!data.examples,
+        examplesCount: data.examples ? data.examples.length : 0
     });
     
-    // Load and display 3D model
-    loadTutorialPiece(pieceType);
+    // Always update text content, even if 3D scene isn't ready
+    
+    // Update page number
+    const pageNumberEl = document.getElementById('tutorial-page-number');
+    if (pageNumberEl) {
+        pageNumberEl.textContent = tutorialState.currentPiece + 1;
+    } else {
+        console.warn('⚠️ Tutorial page number element not found');
+    }
+    
+    // Update piece name
+    const pieceNameEl = document.getElementById('tutorial-piece-name');
+    if (pieceNameEl) {
+        pieceNameEl.textContent = data.name;
+        console.log('✅ Updated piece name to:', data.name);
+    } else {
+        console.warn('⚠️ Tutorial piece name element not found');
+    }
+    
+    // Update description - CRITICAL: Must find and update this element
+    const descriptionEl = document.getElementById('tutorial-description');
+    
+    if (descriptionEl) {
+        // Clear any existing content first
+        descriptionEl.innerHTML = '';
+        
+        // Set content directly - use innerHTML to preserve HTML formatting
+        descriptionEl.innerHTML = data.description || 'No description available';
+        
+        // Force visibility with inline styles (overrides CSS) - use explicit colors
+        descriptionEl.style.display = 'block';
+        descriptionEl.style.visibility = 'visible';
+        descriptionEl.style.opacity = '1';
+        descriptionEl.style.minHeight = '50px';
+        descriptionEl.style.padding = '8px';
+        descriptionEl.style.background = '#1e2746'; // Explicit background color
+        descriptionEl.style.color = '#b4b4d4'; // Explicit text color
+        descriptionEl.style.fontSize = '12px';
+        descriptionEl.style.lineHeight = '1.6';
+        descriptionEl.style.borderRadius = '8px';
+        descriptionEl.style.marginBottom = '16px';
+    } else {
+        // Element not found - this is a critical error
+        console.error('❌ CRITICAL: tutorial-description element NOT FOUND!');
+    }
+    
+    // Update examples - CRITICAL: Must find and update this element
+    const examplesContainer = document.getElementById('tutorial-examples');
+    
+    if (examplesContainer) {
+        // Clear existing content
+        examplesContainer.innerHTML = '';
+        
+        // Force visibility with explicit styles
+        examplesContainer.style.display = 'block';
+        examplesContainer.style.visibility = 'visible';
+        examplesContainer.style.opacity = '1';
+        examplesContainer.style.minHeight = '30px';
+        examplesContainer.style.color = '#7878a3'; // Explicit text color
+        examplesContainer.style.fontSize = '11px';
+        
+        if (data.examples && data.examples.length > 0) {
+            data.examples.forEach((example) => {
+                const exampleDiv = document.createElement('div');
+                exampleDiv.style.marginBottom = '8px';
+                exampleDiv.style.padding = '8px';
+                exampleDiv.style.background = '#1e2746';
+                exampleDiv.style.borderLeft = '3px solid #00d4ff';
+                exampleDiv.style.borderRadius = '4px';
+                exampleDiv.innerHTML = `
+                    <div style="font-weight: bold; color: #00d4ff; margin-bottom: 4px;">${example.title}</div>
+                    <div style="color: #b4b4d4; line-height: 1.5;">${example.text}</div>
+                `;
+                examplesContainer.appendChild(exampleDiv);
+            });
+        } else {
+            // Fallback if no examples
+            examplesContainer.innerHTML = '<div style="padding: 8px; background: #1e2746; color: #b4b4d4;">No examples available</div>';
+        }
+    } else {
+        // Element not found - critical error
+        console.error('❌ CRITICAL: tutorial-examples element NOT FOUND!');
+    }
+    
+    // Load and display 3D model (only if scene is ready)
+    if (tutorialState.scene) {
+        loadTutorialPiece(pieceType);
+    } else {
+        console.warn('⚠️ Tutorial scene not ready, skipping 3D model load');
+    }
 }
 
 function loadTutorialPiece(pieceType) {
+    if (!tutorialState.scene) {
+        console.warn('⚠️ Tutorial scene not initialized');
+        return;
+    }
+    
     // Remove previous mesh
     if (tutorialState.currentMesh) {
         tutorialState.scene.remove(tutorialState.currentMesh);
@@ -280,9 +402,12 @@ function loadTutorialPiece(pieceType) {
     
     // Get geometry from Models
     if (!Models || !Models.geometries || !Models.geometries[pieceType]) {
-        console.warn(`Tutorial: Geometry not loaded for ${pieceType}`);
+        console.warn(`⚠️ Tutorial: Geometry not loaded for ${pieceType}. Models available:`, Models ? Object.keys(Models.geometries || {}) : 'Models not defined');
+        // Don't return - we can still show the text even without the 3D model
         return;
     }
+    
+    console.log(`✅ Loading 3D model for ${pieceType}`);
     
     const geometry = Models.geometries[pieceType];
     const material = new THREE.MeshPhongMaterial({
