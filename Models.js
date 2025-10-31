@@ -153,7 +153,16 @@ const Models = {
         
         // Create material with proper properties
         const meshMaterial = new THREE.MeshPhongMaterial(material);
-        let mesh = new THREE.Mesh(geometry, meshMaterial);
+        
+        // Clone geometry to avoid modifying the original
+        const clonedGeometry = geometry.clone();
+        
+        // Fix normals - recompute to ensure they're correct
+        clonedGeometry.computeVertexNormals();
+        
+        // Do not globally flip normals; fix per-piece below if needed
+        
+        let mesh = new THREE.Mesh(clonedGeometry, meshMaterial);
         
         mesh.position.set(0, 0, 0);
         mesh.rotation.set(pieceData.rotation.x, pieceData.rotation.y, pieceData.rotation.z);
@@ -164,7 +173,12 @@ const Models = {
 		const height = new THREE.Box3().setFromObject(mesh).max.y;
 		
 		mesh.scale.multiplyScalar(scale)
-		mesh.position.set(x, y, z)
+        mesh.position.set(x, y, z)
+
+        // Per-piece fixes for inverted surfaces
+        if (piece === 'pawn' || piece === 'bishop') {
+            mesh.material.side = THREE.DoubleSide;
+        }
         
         mesh.canRayCast = canRayCast;
         

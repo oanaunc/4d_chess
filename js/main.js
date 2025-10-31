@@ -81,7 +81,7 @@ function init() {
 function setupThreeJS() {
     // Create scene
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a0e27);
+    scene.background = new THREE.Color(0x0a0e27); // Dark blue background
     scene.fog = new THREE.Fog(0x0a0e27, 1000, 3000);
     
     // Create camera
