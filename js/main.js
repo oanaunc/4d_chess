@@ -432,11 +432,17 @@ function executeMove(x0, y0, z0, w0, x1, y1, z1, w1) {
             // Note: moveManager.move() already calls updateUI() at the end,
             // which updates the turn-text, turn-icon, turn-number, current-player, etc.
             
-            // Check for win condition after move
-            checkWinCondition();
-            
-            // Check if bot should move next
-            scheduleBotMove();
+            // Check for win condition after move (with delay to ensure board state is updated)
+            setTimeout(() => {
+                checkWinCondition();
+                
+                // Also check if bot should move next (but only if game is not over)
+                const winStatus = gameBoard.winCondition();
+                if (winStatus === -1) {
+                    // Game continues, schedule bot move if needed
+                    scheduleBotMove();
+                }
+            }, 200);
         } catch (error) {
             console.error('❌ Error executing move via moveManager:', error);
             success = false;
@@ -621,6 +627,11 @@ function initializeGame() {
                     
                     // Create move manager
                     moveManager = new MoveManager(gameBoard, 0, LocalMode);
+                    
+                    // Expose moveManager globally for GameBoard.js checkmate detection
+                    if (typeof window !== 'undefined') {
+                        window.moveManager = moveManager;
+                    }
                     
                     // Initialize move history display
                     if (typeof updateMoveHistoryDisplay === 'function') {
@@ -953,6 +964,11 @@ function resetGame() {
     // Reset move manager
     if (moveManager) {
         moveManager = new MoveManager(gameBoard, 0, LocalMode);
+        
+        // Expose moveManager globally
+        if (typeof window !== 'undefined') {
+            window.moveManager = moveManager;
+        }
     }
     
     // Reset UI
@@ -1414,8 +1430,29 @@ function updatePieceHover() {
     // Only update hover if no piece is selected
     if (selectionSystem.selectedPiece) return;
     
-    // Get all selectable pieces
-    const pieces = gameBoard.graphics.piecesContainer.children.filter(p => p.canRayCast);
+    // Get current team (only hover pieces from current player)
+    let currentTeam = null;
+    if (moveManager && typeof moveManager.whoseTurn === 'function') {
+        currentTeam = moveManager.whoseTurn();
+    }
+    
+    // Get all selectable pieces (only from current team)
+    const pieces = gameBoard.graphics.piecesContainer.children.filter(p => {
+        if (!p.canRayCast) return false;
+        if (p.selectable === false) return false;
+        
+        // Only hover pieces from current player's team
+        if (currentTeam !== null) {
+            const worldPos = p.position;
+            const boardCoords = gameBoard.graphics.worldCoordinates(worldPos);
+            const piece = gameBoard.pieces[boardCoords.x][boardCoords.y][boardCoords.z][boardCoords.w];
+            if (piece && piece.team !== currentTeam) {
+                return false; // Not current player's piece
+            }
+        }
+        
+        return true;
+    });
     
     if (pieces.length === 0) return;
     
@@ -1433,10 +1470,22 @@ function updatePieceHover() {
             selectionSystem.unhighlight(selectionSystem.hoveredPiece);
         }
         
-        // Highlight new hover
+        // Highlight new hover (only if it's selectable and from current team)
         selectionSystem.hoveredPiece = closest;
         if (selectionSystem.hoveredPiece && selectionSystem.hoveredPiece.selectable !== false) {
-            selectionSystem.highlight(selectionSystem.hoveredPiece, selectionSystem.HOVER_COLOR);
+            // Double-check it's from current team
+            if (currentTeam !== null) {
+                const worldPos = selectionSystem.hoveredPiece.position;
+                const boardCoords = gameBoard.graphics.worldCoordinates(worldPos);
+                const piece = gameBoard.pieces[boardCoords.x][boardCoords.y][boardCoords.z][boardCoords.w];
+                if (piece && piece.team === currentTeam) {
+                    selectionSystem.highlight(selectionSystem.hoveredPiece, selectionSystem.HOVER_COLOR);
+                } else {
+                    selectionSystem.hoveredPiece = null;
+                }
+            } else {
+                selectionSystem.highlight(selectionSystem.hoveredPiece, selectionSystem.HOVER_COLOR);
+            }
         }
     }
 }
@@ -1533,6 +1582,18 @@ function selectPiece(mesh) {
         return; // Cannot select this piece
     }
     
+    // CRITICAL: Check if it's the current player's turn
+    let currentTeam = null;
+    if (moveManager && typeof moveManager.whoseTurn === 'function') {
+        currentTeam = moveManager.whoseTurn();
+    }
+    
+    // Only allow selecting pieces from the current player's team
+    if (currentTeam !== null && piece.team !== currentTeam) {
+        console.log(`⛔ Cannot select opponent's piece (team ${piece.team}, current team ${currentTeam})`);
+        return; // Cannot select opponent's piece
+    }
+    
     // Select the piece
     selectionSystem.selectedPiece = mesh;
     selectionSystem.highlight(mesh, selectionSystem.SELECT_COLOR);
@@ -1562,6 +1623,33 @@ function selectPiece(mesh) {
     );
     
     gameState.possibleMoves = possibleMoves;
+    
+    // Check for checkmate/stalemate after filtering moves
+    // This is especially important when a player has no legal moves and is in check
+    if (possibleMoves.length === 0) {
+        // No legal moves for this piece - check all pieces to see if team has any legal moves
+        const teamHasLegalMoves = gameBoard.hasLegalMoves(piece.team);
+        const isInCheck = gameBoard.inCheck(piece.team);
+        
+        if (isInCheck && !teamHasLegalMoves) {
+            // In check with no legal moves for entire team = checkmate!
+            console.log(`⚠️ CHECKMATE detected! Team ${piece.team} is in check with no legal moves.`);
+            // Check win condition with a small delay to ensure UI is updated
+            setTimeout(() => {
+                if (typeof checkWinCondition === 'function') {
+                    checkWinCondition();
+                }
+            }, 300);
+        } else if (!isInCheck && !teamHasLegalMoves) {
+            // Not in check but no legal moves = stalemate
+            console.log(`⚠️ STALEMATE detected! Team ${piece.team} has no legal moves but is not in check.`);
+            setTimeout(() => {
+                if (typeof checkWinCondition === 'function') {
+                    checkWinCondition();
+                }
+            }, 300);
+        }
+    }
     
     // Show possible moves (with canRayCast=true so they can be clicked)
     if (possibleMoves && possibleMoves.length > 0) {
@@ -1720,6 +1808,17 @@ function setGameMode(mode) {
     // Deselect current piece
     deselectPiece();
     
+    // Check if game is already over before starting bot mode
+    if (gameBoard && moveManager) {
+        const winStatus = gameBoard.winCondition();
+        if (winStatus !== -1) {
+            // Game is already over, show modal and don't start bots
+            console.log(`🛑 Game is already over (winStatus: ${winStatus}), cannot start bot mode`);
+            checkWinCondition();
+            return;
+        }
+    }
+    
     // Start bot vs bot if needed
     if (mode === GAME_MODES.BOT_VS_BOT && gameBoard && moveManager) {
         startBotVsBot();
@@ -1737,10 +1836,33 @@ function scheduleBotMove() {
     if (!gameBoard || !moveManager) return;
     
     const currentTeam = moveManager.whoseTurn();
-    const winStatus = gameBoard.winCondition();
     
-    // Don't schedule if game is over
-    if (winStatus !== -1) return;
+    // CRITICAL: Check if game is over (checkmate/stalemate) before scheduling bot move
+    const winStatus = gameBoard.winCondition();
+    if (winStatus !== -1) {
+        // Game is over - don't schedule bot move
+        console.log(`🛑 Game is over (winStatus: ${winStatus}), bot will not move`);
+        checkWinCondition(); // Ensure modal is shown
+        return;
+    }
+    
+    // CRITICAL: Check if current team is in checkmate (has no legal moves)
+    const isInCheck = gameBoard.inCheck(currentTeam);
+    const hasLegalMoves = gameBoard.hasLegalMoves(currentTeam);
+    
+    if (isInCheck && !hasLegalMoves) {
+        // Team is in checkmate - game should be over, don't let bot move
+        console.log(`🛑 Team ${currentTeam} is in CHECKMATE - bot will not move`);
+        checkWinCondition(); // Trigger win condition check and modal
+        return;
+    }
+    
+    if (!isInCheck && !hasLegalMoves) {
+        // Team is in stalemate - game should be over
+        console.log(`🛑 Team ${currentTeam} is in STALEMATE - bot will not move`);
+        checkWinCondition(); // Trigger win condition check and modal
+        return;
+    }
     
     // Check if current team should be controlled by bot
     let shouldBotMove = false;
@@ -1760,6 +1882,12 @@ function scheduleBotMove() {
             Bot.makeMove(gameBoard, moveManager, currentTeam).then((success) => {
                 if (success) {
                     // Bot move completed, will check again after move completes
+                } else {
+                    // Bot couldn't make a move - check if it's checkmate
+                    const winStatusAfter = gameBoard.winCondition();
+                    if (winStatusAfter !== -1) {
+                        checkWinCondition();
+                    }
                 }
             });
         }, 1500); // 1.5 second delay for visual effect
@@ -1768,6 +1896,37 @@ function scheduleBotMove() {
 
 function startBotVsBot() {
     console.log('🤖 Starting Bot vs Bot mode');
+    
+    // Check if game is already over before starting
+    if (!gameBoard || !moveManager) {
+        console.warn('⚠️ Cannot start Bot vs Bot: gameBoard or moveManager not available');
+        return;
+    }
+    
+    const winStatus = gameBoard.winCondition();
+    if (winStatus !== -1) {
+        console.log(`🛑 Cannot start Bot vs Bot: Game is already over (winStatus: ${winStatus})`);
+        checkWinCondition(); // Show modal
+        return;
+    }
+    
+    // Check if current team is in checkmate/stalemate
+    const currentTeam = moveManager.whoseTurn();
+    const isInCheck = gameBoard.inCheck(currentTeam);
+    const hasLegalMoves = gameBoard.hasLegalMoves(currentTeam);
+    
+    if (isInCheck && !hasLegalMoves) {
+        console.log(`🛑 Cannot start Bot vs Bot: Team ${currentTeam} is in CHECKMATE`);
+        checkWinCondition(); // Show modal
+        return;
+    }
+    
+    if (!isInCheck && !hasLegalMoves) {
+        console.log(`🛑 Cannot start Bot vs Bot: Team ${currentTeam} is in STALEMATE`);
+        checkWinCondition(); // Show modal
+        return;
+    }
+    
     // First move will be scheduled by scheduleBotMove after setup
     scheduleBotMove();
 }

@@ -120,15 +120,89 @@ GameBoard.prototype = {
 	},
 	
 	winCondition: function() {
-		if (Piece.inCheckmate(this.pieces, 0)) {
-			return 1;
-		} else if (Piece.inCheckmate(this.pieces, 1)) {
-			return 0;
-		} else if (Piece.inStalemate(this.pieces, 0) || Piece.inStalemate(this.pieces, 1)){
-			return 2;
-		} else {
-			return -1;
+		// Check if white is in checkmate (white in check + no legal moves)
+		const whiteInCheck = this.inCheck(0);
+		if (whiteInCheck) {
+			const whiteHasLegalMoves = this.hasLegalMoves(0);
+			if (!whiteHasLegalMoves) {
+				return 1; // Black wins
+			}
 		}
+		
+		// Check if black is in checkmate (black in check + no legal moves)
+		const blackInCheck = this.inCheck(1);
+		if (blackInCheck) {
+			const blackHasLegalMoves = this.hasLegalMoves(1);
+			if (!blackHasLegalMoves) {
+				return 0; // White wins
+			}
+		}
+		
+		// Check for stalemate (not in check but no legal moves)
+		// Get current team from global moveManager if available
+		let currentTeam = 0;
+		if (typeof window !== 'undefined' && window.moveManager) {
+			currentTeam = window.moveManager.whoseTurn();
+		}
+		
+		const currentNotInCheck = !this.inCheck(currentTeam);
+		if (currentNotInCheck && !this.hasLegalMoves(currentTeam)) {
+			return 2; // Stalemate
+		}
+		
+		return -1; // Game continues
+	},
+	
+	hasLegalMoves: function(team) {
+		// Check all pieces of this team
+		for (let x = 0; x < this.n; x++) {
+			for (let y = 0; y < this.n; y++) {
+				for (let z = 0; z < this.n; z++) {
+					for (let w = 0; w < this.n; w++) {
+						const piece = this.pieces[x][y][z][w];
+						if (piece && piece.type && piece.team === team) {
+							try {
+								const possibleMoves = piece.getPossibleMoves(this.pieces, x, y, z, w);
+								
+								if (possibleMoves && possibleMoves.length > 0) {
+									// Check if any move is legal
+									for (const move of possibleMoves) {
+										if (this.isMoveLegal(x, y, z, w, move.x, move.y, move.z, move.w, team)) {
+											return true; // Found at least one legal move
+										}
+									}
+								}
+							} catch (error) {
+								// Skip this piece if there's an error
+								continue;
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		return false; // No legal moves found
+	},
+	
+	isMoveLegal: function(x0, y0, z0, w0, x1, y1, z1, w1, team) {
+		// Simulate the move
+		const sourcePiece = this.pieces[x0][y0][z0][w0];
+		const targetPiece = this.pieces[x1][y1][z1][w1];
+		
+		// Make the move temporarily
+		this.pieces[x1][y1][z1][w1] = sourcePiece;
+		this.pieces[x0][y0][z0][w0] = createEmptyPiece();
+		
+		// Check if still in check after move
+		const stillInCheck = this.inCheck(team);
+		
+		// Restore board
+		this.pieces[x0][y0][z0][w0] = sourcePiece;
+		this.pieces[x1][y1][z1][w1] = targetPiece;
+		
+		// Move is legal if it doesn't leave us in check (or gets us out of check)
+		return !stillInCheck;
 	},
 	
 	applyToAll: function(f){

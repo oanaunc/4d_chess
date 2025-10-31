@@ -315,11 +315,37 @@ const Bot = {
             return Promise.resolve(false);
         }
         
+        // CRITICAL: Check if team is in checkmate/stalemate before attempting to move
+        const isInCheck = gameBoard.inCheck(team);
+        const hasLegalMoves = gameBoard.hasLegalMoves(team);
+        
+        if (isInCheck && !hasLegalMoves) {
+            console.log(`🛑 Bot: Team ${team} is in CHECKMATE - cannot make a move`);
+            // Trigger win condition check
+            if (typeof checkWinCondition === 'function') {
+                setTimeout(() => checkWinCondition(), 100);
+            }
+            return Promise.resolve(false);
+        }
+        
+        if (!isInCheck && !hasLegalMoves) {
+            console.log(`🛑 Bot: Team ${team} is in STALEMATE - cannot make a move`);
+            // Trigger win condition check
+            if (typeof checkWinCondition === 'function') {
+                setTimeout(() => checkWinCondition(), 100);
+            }
+            return Promise.resolve(false);
+        }
+        
         // Get the best move
         const move = Bot.getBestMove(gameBoard, team);
         
         if (!move) {
-            console.warn(`Bot: No legal moves found for team ${team}`);
+            console.warn(`Bot: No legal moves found for team ${team} - may be checkmate/stalemate`);
+            // Double-check win condition if no move found
+            if (typeof checkWinCondition === 'function') {
+                setTimeout(() => checkWinCondition(), 100);
+            }
             return Promise.resolve(false);
         }
         
