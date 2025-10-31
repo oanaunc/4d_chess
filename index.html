@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎮 4D Chess - Four-Dimensional Chess Game</title>
+    <title>4D Chess - Four-Dimensional Chess Game</title>
     
     <!-- Styles -->
     <link rel="stylesheet" href="css/main.css">
@@ -17,13 +17,13 @@
 <body>
     <!-- Header Bar -->
     <header class="header-bar">
-        <h1 class="title">🎮 4D CHESS</h1>
+        <h1 class="title">⚫ 4D CHESS</h1>
         <div class="turn-indicator" id="turn-indicator">
-            <span class="turn-icon" id="turn-icon">♔</span>
+            <span class="turn-icon" id="turn-icon">♚</span>
             <span class="turn-text" id="turn-text">White to move</span>
         </div>
         <div class="check-indicator" id="check-indicator" style="display:none;">
-            <span class="check-text">⚠️ CHECK!</span>
+            <span class="check-text">⚠ CHECK!</span>
         </div>
     </header>
 
@@ -32,7 +32,7 @@
         <aside class="control-panel">
             <!-- Game Status -->
             <section class="card status-card">
-                <h3>🎯 Game Status</h3>
+                <h3>Game Status</h3>
                 <ul>
                     <li>Turn: <span id="turn-number">1</span></li>
                     <li>Player: <span id="current-player">White</span></li>
@@ -42,7 +42,7 @@
             
             <!-- Selected Piece Info -->
             <section class="card piece-card" id="selected-piece-info" style="display:none;">
-                <h3>📍 Selected Piece</h3>
+                <h3>⌖ Selected Piece</h3>
                 <ul>
                     <li>Type: <span id="piece-type"></span></li>
                     <li>Position: <span id="piece-pos"></span></li>
@@ -52,9 +52,9 @@
             
             <!-- Action Buttons -->
             <section class="card actions-card">
-                <h3>🎲 Actions</h3>
+                <h3>Actions</h3>
                 <button class="btn btn-primary btn-large" id="new-game-btn">
-                    🔄 NEW GAME
+                    <span class="new-game-icon">⟲</span> NEW GAME
                 </button>
                 <div class="btn-group">
                     <button class="btn btn-secondary" id="undo-btn">
@@ -64,19 +64,11 @@
                         ↷ REDO
                     </button>
                 </div>
-                <div class="btn-group">
-                    <button class="btn btn-secondary" id="save-btn">
-                        💾 SAVE
-                    </button>
-                    <button class="btn btn-secondary" id="load-btn">
-                        📂 LOAD
-                    </button>
-                </div>
             </section>
             
             <!-- Statistics -->
             <section class="card stats-card">
-                <h3>📊 Statistics</h3>
+                <h3>Statistics</h3>
                 <div class="stat-row">
                     <span>White pieces:</span>
                     <span id="white-count" class="stat-value">128</span>
@@ -93,7 +85,7 @@
             
             <!-- Move History -->
             <section class="card history-card">
-                <h3>📜 Move History</h3>
+                <h3>Move History</h3>
                 <div class="move-list" id="move-history">
                     <div class="move-item">Game started...</div>
                 </div>
@@ -101,21 +93,21 @@
             
             <!-- Camera -->
             <section class="card camera-card">
-                <h3>📷 Camera</h3>
+                <h3>Camera</h3>
                 <button class="btn btn-secondary btn-block" id="reset-camera">
-                    🎯 Reset View
+                    ◎ Reset View
                 </button>
                 <button class="btn btn-secondary btn-block" id="top-view">
-                    ⬆️ Top View
+                    ↑ Top View
                 </button>
                 <button class="btn btn-secondary btn-block" id="side-view">
-                    ➡️ Side View
+                    → Side View
                 </button>
             </section>
             
             <!-- Mouse Controls -->
             <section class="card help-card">
-                <h3>🖱️ Mouse Controls</h3>
+                <h3>Mouse Controls</h3>
                 <div class="shortcut-list">
                     <div class="shortcut-item">
                         <span class="key">Left Click</span>
@@ -134,7 +126,7 @@
             
             <!-- Keyboard Shortcuts Help -->
             <section class="card help-card">
-                <h3>⌨️ Keyboard</h3>
+                <h3>Keyboard</h3>
                 <div class="shortcut-list">
                     <div class="shortcut-item">
                         <span class="key">R</span>
@@ -167,7 +159,7 @@
                     <h2 id="game-over-title">Checkmate!</h2>
                     <p id="game-over-message"></p>
                     <button class="btn btn-primary" id="new-game-modal-btn">
-                        🔄 New Game
+                        ⟲ New Game
                     </button>
                 </div>
             </div>
@@ -176,7 +168,7 @@
         <!-- Right Panel: Navigation Panel -->
         <aside class="nav-panel">
             <section class="card nav-card">
-                <h3>🧭 4D Navigation</h3>
+                <h3>4D Navigation</h3>
                 
                 <!-- 4D Axes Gizmo -->
                 <div class="gizmo-container">
@@ -199,7 +191,7 @@
             
             <!-- Piece Tutorial -->
             <section class="card tutorial-card">
-                <h3>📖 4D Chess Pieces</h3>
+                <h3>4D Chess Pieces</h3>
                 
                 <!-- Navigation -->
                 <div class="tutorial-nav">
@@ -214,7 +206,7 @@
                 <div class="tutorial-viewer">
                     <canvas id="tutorial-piece-canvas"></canvas>
                     <div class="tutorial-controls">
-                        <span class="tutorial-hint">💡 Drag to rotate</span>
+                        <span class="tutorial-hint">Drag to rotate</span>
                     </div>
                 </div>
                 

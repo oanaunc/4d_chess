@@ -449,9 +449,6 @@ function setupUIEvents() {
     document.getElementById('undo-btn').addEventListener('click', undoMove);
     document.getElementById('redo-btn').addEventListener('click', redoMove);
     
-    // Save/Load buttons
-    document.getElementById('save-btn').addEventListener('click', saveGame);
-    document.getElementById('load-btn').addEventListener('click', loadGame);
     
     // Opacity slider
     const opacitySlider = document.getElementById('opacity-slider');

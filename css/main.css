@@ -115,6 +115,9 @@ body {
 
 .turn-icon {
     font-size: 24px;
+    display: inline-block;
+    vertical-align: middle;
+    line-height: 1;
 }
 
 .turn-text {
@@ -272,6 +275,15 @@ body {
     padding: 15px;
     font-size: 16px;
     margin-bottom: var(--spacing-md);
+}
+
+.new-game-icon {
+    font-size: 20px;
+    line-height: 1.2;
+    display: inline-block;
+    vertical-align: baseline;
+    margin-right: 8px;
+    font-weight: normal;
 }
 
 .btn-block {
