@@ -756,6 +756,15 @@ BoardGraphics.prototype = {
         
         animationQueue[animationQueue.length - 1].onAnimate = function(){
             piece.mesh.canRayCast = true // re-enable piece's ability to be found in rayCast
+            
+            // Deselect the piece after animation completes (remove blue highlight)
+            if (typeof window !== 'undefined' && window.deselectPiece && window.selectionSystem) {
+                // Check if this mesh was selected
+                if (window.selectionSystem.selectedPiece === piece.mesh) {
+                    window.deselectPiece();
+                }
+            }
+            
             if(piece.type === 'pawn' && this.isOnPromotionSquare(x1, y1, z1, w1)){
 				// Normal capture logic and animation is still executed,
 				// but here we remove the pawn's sprite and spawn in a queen

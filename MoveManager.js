@@ -45,21 +45,26 @@ function MoveManager(gameBoard, clientTeam, mode) {
 	
 	this.updateUI = function() {
 		// Try to update React UI (if it exists)
-		try {
-			if (typeof window !== 'undefined' && window.toolbarProxy && window.toolbarProxy.setState) {
-				window.toolbarProxy.setState({
-					text: this.moveStatus()
-				});
-			}
-		} catch (e) {
-			// toolbarProxy doesn't exist, ignore
-		}
+		// Note: toolbarProxy is not used in our implementation, skip it
+		// try {
+		// 	if (typeof window !== 'undefined' && typeof window.toolbarProxy !== 'undefined' && window.toolbarProxy && window.toolbarProxy.setState) {
+		// 		window.toolbarProxy.setState({
+		// 			text: this.moveStatus()
+		// 		});
+		// 	}
+		// } catch (e) {
+		// 	// toolbarProxy doesn't exist, ignore
+		// }
 		
 		// Update HTML status display
 		const statusText = this.moveStatus();
 		const statusElement = document.getElementById('turn-text');
 		if (statusElement) {
+			// Use moveStatus() which already formats it correctly
 			statusElement.textContent = statusText;
+			console.log('🔄 Updated turn-text to:', statusText, 'whoseTurn:', this.whoseTurn());
+		} else {
+			console.warn('⚠️ turn-text element not found!');
 		}
 		
 		// Update turn icon
@@ -178,7 +183,10 @@ function MoveManager(gameBoard, clientTeam, mode) {
 		}
 		this.updateUI();
 		this.updateSelectability();
-		uiProxy.exitMenu();
+		// uiProxy is not used in our implementation
+		// if (typeof uiProxy !== 'undefined' && uiProxy.exitMenu) {
+		// 	uiProxy.exitMenu();
+		// }
 	}
 }
 

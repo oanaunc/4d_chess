@@ -7,6 +7,8 @@ let scene, camera, renderer, controls;
 let gameBoard, moveManager;
 let canvas, loadingScreen;
 
+// Make functions globally available for GameBoard callbacks (will be set after functions are defined)
+
 // Game mode (local single player for now)
 const LocalMode = {
     move: function(x0, y0, z0, w0, x1, y1, z1, w1, receiving) {
@@ -24,8 +26,15 @@ const LocalMode = {
         // Update piece selectability based on whose turn it is
         this.updateSelectability();
         
-        // Update UI (status display)
+        // Update UI (status display) - do this AFTER move is added to history
         this.updateUI();
+        
+        // Force UI update for turn-text specifically
+        const turnTextEl = document.getElementById('turn-text');
+        if (turnTextEl) {
+            const currentTeam = this.whoseTurn();
+            turnTextEl.textContent = currentTeam === 0 ? 'White to Move' : 'Black to Move';
+        }
     },
     undo: function() {
         if (this.moveHistory.undo()) {
@@ -140,6 +149,19 @@ const selectionSystem = {
 
 function init() {
     console.log('🎮 Initializing 4D Chess...');
+    
+    // Setup global callbacks for GameBoard (so it can call deselectPiece after animation)
+    if (typeof window !== 'undefined') {
+        window.setupGlobalCallbacks = function() {
+            window.deselectPiece = deselectPiece;
+            window.selectionSystem = selectionSystem;
+        };
+        // Call it now since functions are already defined
+        if (typeof deselectPiece === 'function' && typeof selectionSystem !== 'undefined') {
+            window.deselectPiece = deselectPiece;
+            window.selectionSystem = selectionSystem;
+        }
+    }
     
     // Suppress browser extension errors (common Chrome extension issue)
     window.addEventListener('error', (e) => {
