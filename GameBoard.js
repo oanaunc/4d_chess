@@ -647,7 +647,7 @@ BoardGraphics.prototype = {
         return new THREE.Vector4(x, y, z, w)
     },
 	
-	showPossibleMoves: function(locations, piece, materialScheme={}, canRayCast=false){
+    showPossibleMoves: function(locations, piece, materialScheme={}, canRayCast=false){
 		// Default material scheme: transparent green for moves, transparent pieces for captures
 		materialScheme = Object.assign({
 			0: {
@@ -682,6 +682,9 @@ BoardGraphics.prototype = {
 			return;
 		}
 		
+		// Track pieces that will be captured (to highlight them in red)
+		const capturedPieces = [];
+		
         locations.forEach(pos => {
 			const coordinates = this.boardCoordinates(pos.x, pos.y, pos.z, pos.w);
 			let material;
@@ -694,6 +697,18 @@ BoardGraphics.prototype = {
 				if (!attackedPiece || !attackedPiece.type) {
 					return; // Skip if no piece to capture
 				}
+				
+				// Highlight the actual piece that will be captured in red
+				if (attackedPiece.mesh && attackedPiece.mesh.material) {
+					// Store original color if not already stored
+					if (!attackedPiece.mesh.material.originalColor) {
+						attackedPiece.mesh.material.originalColor = attackedPiece.mesh.material.color.getHex();
+					}
+					// Highlight in red
+					attackedPiece.mesh.material.color.setHex(0xff0000); // Red
+					capturedPieces.push(attackedPiece.mesh);
+				}
+				
 				material = materialScheme[piece.team].attackMaterial;
 				pieceType = attackedPiece.type;
 				shadowPiece = Models.createMesh(pieceType, material, coordinates.x, coordinates.y, coordinates.z, 1, canRayCast);
@@ -721,6 +736,8 @@ BoardGraphics.prototype = {
 			}
         });
         
+		// Store captured pieces list so we can restore them later
+		this.capturedPiecesHighlighted = capturedPieces;
     },
     
     showPossibleMoves2: function(x, y, z, w, materialScheme){
@@ -732,6 +749,17 @@ BoardGraphics.prototype = {
     },
     
     hidePossibleMoves: function(){
+        // Restore original colors of captured pieces (remove red highlight)
+        if (this.capturedPiecesHighlighted) {
+            this.capturedPiecesHighlighted.forEach(mesh => {
+                if (mesh && mesh.material && mesh.material.originalColor !== undefined) {
+                    mesh.material.color.setHex(mesh.material.originalColor);
+                }
+            });
+            this.capturedPiecesHighlighted = [];
+        }
+        
+        // Remove preview meshes
         while(this.possibleMovesContainer.children.length){
 			const mesh = this.possibleMovesContainer.children[0];
 			// Dispose of geometry and material to prevent memory leaks
