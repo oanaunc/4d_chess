@@ -235,30 +235,76 @@ GameBoard.prototype = {
     
     initializeStartingPositions: function(){
         /*
-         * Initialize pieces for 8x8x8x8 4D chess
+         * Initialize pieces for 8x8x8x8 4D chess with mirrored distribution
          * 
-         * WHITE (Team 0): Y=0,1,2,3 across W=0,1,2,3 (16 boards × 16 pieces = 256 pieces)
-         * BLACK (Team 1): Y=4,5,6,7 across W=4,5,6,7 (16 boards × 16 pieces = 256 pieces)
+         * Bottom layers (Y=0,1,2):
+         * - WHITE (Team 0): W=0,1,2,3 (12 boards × 16 pieces = 192 pieces)
+         * - BLACK (Team 1): W=4,5,6,7 (12 boards × 16 pieces = 192 pieces)
          * 
-         * Each team occupies 4 Y-layers (height levels), creating a "4 by 4" distribution
-         * visible as height on screen
+         * Center boards (Y=3 & Y=4, traditional chess-style):
+         * - Y=3: 2 boards at W=2,3 where both teams start facing each other
+         * - Y=4: 2 boards at W=4,5 where both teams start facing each other
+         * - Each board: 16 white pieces + 16 black pieces = 32 pieces
+         * - Total: 128 pieces (64 per team) - evenly split across 2 layers
+         * 
+         * Top layers (Y=5,6,7 - MIRRORED):
+         * - BLACK (Team 1): W=0,1,2,3 (12 boards × 16 pieces = 192 pieces) - swapped!
+         * - WHITE (Team 0): W=4,5,6,7 (12 boards × 16 pieces = 192 pieces) - swapped!
+         * 
+         * Grand total: 384 + 128 + 384 = 896 pieces (448 per team)
+         * All Y layers (0-7) now have pieces - no empty layers!
          */
         
-        // Place WHITE pieces (Y=0,1,2,3 × W=0,1,2,3) - 4 Y layers
-        for (let y = 0; y <= 3; y++) {
+        // Main distribution: WHITE pieces (Y=0,1,2 × W=0,1,2,3) - reduced to 3 Y layers
+        for (let y = 0; y <= 2; y++) {
             for (let w = 0; w <= 3; w++) {
                 this.placeTeamPieces(0, w, y); // team 0 (white)
             }
         }
         
-        // Place BLACK pieces (Y=4,5,6,7 × W=4,5,6,7) - 4 Y layers
-        for (let y = 4; y <= 7; y++) {
+        // Main distribution: BLACK pieces (Y=0,1,2 × W=4,5,6,7) - reduced to 3 Y layers
+        for (let y = 0; y <= 2; y++) {
             for (let w = 4; w <= 7; w++) {
                 this.placeTeamPieces(1, w, y); // team 1 (black)
             }
         }
         
-        console.log('✅ Placed 512 pieces: 256 White + 256 Black');
+        // Center boards: Traditional chess-style with pieces facing each other
+        // Split between Y=3 and Y=4 (2 boards each instead of 4 on one layer)
+        // Y=3: 2 boards at W=2,3
+        for (let w = 2; w <= 3; w++) {
+            // White pieces on one side of the board (Z=0,1)
+            this.placeTeamPieces(0, w, 3);
+            // Black pieces on the other side of the same boards (Z=6,7)
+            this.placeTeamPieces(1, w, 3);
+        }
+        // Y=4: 2 boards at W=4,5 (fills the empty layer)
+        for (let w = 4; w <= 5; w++) {
+            // White pieces on one side of the board (Z=0,1)
+            this.placeTeamPieces(0, w, 4);
+            // Black pieces on the other side of the same boards (Z=6,7)
+            this.placeTeamPieces(1, w, 4);
+        }
+        
+        // Top layers: Mirrored color pattern (swapped W positions)
+        // Y=5,6,7: Black gets W=0-3 (where white was on bottom), White gets W=4-7 (where black was on bottom)
+        for (let y = 5; y <= 7; y++) {
+            // Black pieces on W=0,1,2,3 (mirroring white's bottom position)
+            for (let w = 0; w <= 3; w++) {
+                this.placeTeamPieces(1, w, y); // team 1 (black)
+            }
+            // White pieces on W=4,5,6,7 (mirroring black's bottom position)
+            for (let w = 4; w <= 7; w++) {
+                this.placeTeamPieces(0, w, y); // team 0 (white)
+            }
+        }
+        
+        console.log('✅ Placed 896 pieces: 448 White + 448 Black');
+        console.log('   - Bottom (Y=0-2): 192 White (W=0-3) + 192 Black (W=4-7)');
+        console.log('   - Center (Y=3): 32 White + 32 Black on 2 shared boards (W=2,3)');
+        console.log('   - Center (Y=4): 32 White + 32 Black on 2 shared boards (W=4,5)');
+        console.log('   - Top (Y=5-7): 192 Black (W=0-3) + 192 White (W=4-7) - MIRRORED');
+        console.log('   ✓ All 8 Y layers now have pieces!');
         console.log(`📦 Pieces container has ${this.graphics.piecesContainer.children.length} meshes`);
         
         // Check square colors for white's right corner on each board

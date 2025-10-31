@@ -156,15 +156,14 @@ const Models = {
         // Create material with proper properties
         const meshMaterial = new THREE.MeshPhongMaterial(material);
         
-        // Clone geometry to avoid modifying the original
-        const clonedGeometry = geometry.clone();
+        // REUSE geometry instead of cloning - saves massive amounts of memory!
+        // Three.js can efficiently render the same geometry multiple times with different transforms
+        // Only compute normals once if not already done
+        if (!geometry.attributes.normal || geometry.attributes.normal.count === 0) {
+            geometry.computeVertexNormals();
+        }
         
-        // Fix normals - recompute to ensure they're correct
-        clonedGeometry.computeVertexNormals();
-        
-        // Do not globally flip normals; fix per-piece below if needed
-        
-        let mesh = new THREE.Mesh(clonedGeometry, meshMaterial);
+        let mesh = new THREE.Mesh(geometry, meshMaterial);
         
         mesh.position.set(0, 0, 0);
         mesh.rotation.set(pieceData.rotation.x, pieceData.rotation.y, pieceData.rotation.z);
