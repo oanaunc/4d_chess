@@ -12,6 +12,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="js/tutorial.js"></script>
 </head>
 <body>
     <!-- Header Bar -->
@@ -97,6 +98,41 @@
                 <h3>📜 Move History</h3>
                 <div class="move-list" id="move-history">
                     <div class="move-item">Game started...</div>
+                </div>
+            </section>
+            
+            <!-- Piece Tutorial -->
+            <section class="card tutorial-card">
+                <h3>📖 4D Chess Pieces</h3>
+                
+                <!-- Navigation -->
+                <div class="tutorial-nav">
+                    <button class="btn-nav-small" id="tutorial-prev">◄</button>
+                    <span class="tutorial-page-indicator">
+                        <span id="tutorial-page-number">1</span> / 6
+                    </span>
+                    <button class="btn-nav-small" id="tutorial-next">►</button>
+                </div>
+                
+                <!-- Piece Viewer -->
+                <div class="tutorial-viewer">
+                    <canvas id="tutorial-piece-canvas"></canvas>
+                    <div class="tutorial-controls">
+                        <span class="tutorial-hint">💡 Drag to rotate</span>
+                    </div>
+                </div>
+                
+                <!-- Piece Name -->
+                <h4 id="tutorial-piece-name" class="tutorial-piece-name">Rook</h4>
+                
+                <!-- Movement Description -->
+                <div class="tutorial-description" id="tutorial-description">
+                    <!-- Content will be populated by JavaScript -->
+                </div>
+                
+                <!-- Movement Examples -->
+                <div class="tutorial-examples" id="tutorial-examples">
+                    <!-- Examples will be populated by JavaScript -->
                 </div>
             </section>
         </aside>

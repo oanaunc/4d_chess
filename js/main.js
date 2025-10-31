@@ -106,6 +106,8 @@ function init() {
     // Setup mouse interaction for piece selection
     setupPieceSelection();
     
+    // Tutorial will initialize after models are loaded (see initializeGame)
+    
     // Start animation loop
     animate();
     
@@ -381,6 +383,11 @@ function initializeGame() {
                             loadingScreen.style.display = 'none';
                             console.log('✅ 4D Chess is ready to play!');
                             console.log('📊 Total pieces: 256 (128 white + 128 black)');
+                            
+                            // Initialize tutorial system now that models are loaded
+                            if (typeof initTutorial === 'function') {
+                                initTutorial();
+                            }
                             console.log('📐 Board size: 8×8×8×8 = 4,096 positions');
                             
                             // Debug scene structure
