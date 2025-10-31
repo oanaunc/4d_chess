@@ -1765,9 +1765,44 @@ function updatePieceInfoDisplay(piece, position, possibleMoves) {
         } else {
             possibleMoves.forEach(move => {
                 const moveItem = document.createElement('div');
-                moveItem.className = 'piece-move-item' + (move.possibleCapture ? ' capture' : '');
+                moveItem.className = 'piece-move-item' + (move.possibleCapture ? ' capture' : '') + ' clickable';
                 const captureMarker = move.possibleCapture ? ' [capture]' : '';
                 moveItem.textContent = `(${move.x}, ${move.y}, ${move.z}, ${move.w})${captureMarker}`;
+                
+                // Store move coordinates as data attributes for click handler
+                moveItem.dataset.moveX = move.x;
+                moveItem.dataset.moveY = move.y;
+                moveItem.dataset.moveZ = move.z;
+                moveItem.dataset.moveW = move.w;
+                
+                // Add click handler to execute the move
+                moveItem.addEventListener('click', function(e) {
+                    e.stopPropagation(); // Prevent event bubbling
+                    
+                    // Get the currently selected piece
+                    if (!gameState.selectedPieceData || !gameState.selectedPiece) {
+                        console.warn('⚠️ No piece selected - cannot execute move from list');
+                        return;
+                    }
+                    
+                    // Get piece position from the piece info display
+                    const pieceX = parseInt(document.getElementById('piece-info-x').textContent);
+                    const pieceY = parseInt(document.getElementById('piece-info-y').textContent);
+                    const pieceZ = parseInt(document.getElementById('piece-info-z').textContent);
+                    const pieceW = parseInt(document.getElementById('piece-info-w').textContent);
+                    
+                    // Get target coordinates from the clicked item
+                    const targetX = parseInt(moveItem.dataset.moveX);
+                    const targetY = parseInt(moveItem.dataset.moveY);
+                    const targetZ = parseInt(moveItem.dataset.moveZ);
+                    const targetW = parseInt(moveItem.dataset.moveW);
+                    
+                    console.log(`🎯 Executing move from UI list: (${pieceX},${pieceY},${pieceZ},${pieceW}) → (${targetX},${targetY},${targetZ},${targetW})`);
+                    
+                    // Execute the move
+                    executeMove(pieceX, pieceY, pieceZ, pieceW, targetX, targetY, targetZ, targetW);
+                });
+                
                 movesList.appendChild(moveItem);
             });
         }

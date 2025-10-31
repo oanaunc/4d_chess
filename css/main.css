@@ -655,12 +655,34 @@ body {
     border-left: 2px solid var(--accent-primary);
 }
 
+.piece-move-item.clickable {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.piece-move-item.clickable:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    transform: translateX(4px);
+    box-shadow: 0 2px 4px rgba(0, 212, 255, 0.2);
+}
+
+.piece-move-item.clickable:active {
+    transform: translateX(2px);
+    box-shadow: 0 1px 2px rgba(0, 212, 255, 0.3);
+}
+
 .piece-move-item.capture {
     border-left-color: var(--accent-danger);
     background: rgba(255, 51, 102, 0.1);
 }
 
-.piece-move-item:hover {
+.piece-move-item.capture.clickable:hover {
+    background: rgba(255, 51, 102, 0.25);
+    box-shadow: 0 2px 4px rgba(255, 51, 102, 0.3);
+}
+
+.piece-move-item:not(.clickable):hover {
     background: var(--bg-card);
     color: var(--text-primary);
 }
