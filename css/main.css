@@ -122,6 +122,16 @@ body {
     background: var(--bg-tertiary);
     padding: var(--spacing-sm) var(--spacing-md);
     border-radius: var(--border-radius);
+    transition: all 0.3s ease;
+}
+
+.turn-indicator.white-turn {
+    background: var(--bg-tertiary);
+}
+
+.turn-indicator.black-turn {
+    background: #ffffff;
+    border: 1px solid var(--accent-primary);
 }
 
 .turn-icon {
@@ -129,11 +139,29 @@ body {
     display: inline-block;
     vertical-align: middle;
     line-height: 1;
+    transition: color 0.3s ease;
+}
+
+.turn-indicator.white-turn .turn-icon {
+    color: var(--text-secondary);
+}
+
+.turn-indicator.black-turn .turn-icon {
+    color: #3b3f63; /* Dark blue-purple */
 }
 
 .turn-text {
     font-weight: 600;
     color: var(--text-secondary);
+    transition: color 0.3s ease;
+}
+
+.turn-indicator.white-turn .turn-text {
+    color: var(--text-secondary);
+}
+
+.turn-indicator.black-turn .turn-text {
+    color: #3b3f63; /* Dark blue-purple */
 }
 
 .check-indicator {

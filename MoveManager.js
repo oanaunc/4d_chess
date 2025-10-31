@@ -67,11 +67,20 @@ function MoveManager(gameBoard, clientTeam, mode) {
 			console.warn('⚠️ turn-text element not found!');
 		}
 		
-		// Update turn icon
+		// Update turn icon and indicator styling
+		const turnIndicator = document.getElementById('turn-indicator');
 		const turnIcon = document.getElementById('turn-icon');
-		if (turnIcon) {
+		if (turnIcon && turnIndicator) {
 			const currentTeam = this.whoseTurn();
 			turnIcon.textContent = currentTeam === 0 ? '♔' : '♚';
+			
+			// Update indicator class for styling
+			turnIndicator.classList.remove('white-turn', 'black-turn');
+			if (currentTeam === 0) {
+				turnIndicator.classList.add('white-turn');
+			} else {
+				turnIndicator.classList.add('black-turn');
+			}
 		}
 		
 		// Update turn number
@@ -114,7 +123,9 @@ function MoveManager(gameBoard, clientTeam, mode) {
 	}
 	
 	this.whoseTurn = function() {
-		return this.size() % 2;
+		// Use currTurn() (current position) instead of size() (total moves)
+		// This ensures correct turn after undo/redo operations
+		return this.currTurn() % 2;
 	}
 	
 	this.size = function() {

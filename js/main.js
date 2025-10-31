@@ -29,11 +29,23 @@ const LocalMode = {
         // Update UI (status display) - do this AFTER move is added to history
         this.updateUI();
         
-        // Force UI update for turn-text specifically
+        // Force UI update for turn-text and indicator styling
+        const turnIndicator = document.getElementById('turn-indicator');
         const turnTextEl = document.getElementById('turn-text');
-        if (turnTextEl) {
+        const turnIcon = document.getElementById('turn-icon');
+        
+        if (turnTextEl && turnIndicator && turnIcon) {
             const currentTeam = this.whoseTurn();
             turnTextEl.textContent = currentTeam === 0 ? 'White to Move' : 'Black to Move';
+            turnIcon.textContent = currentTeam === 0 ? '♔' : '♚';
+            
+            // Update indicator class for styling
+            turnIndicator.classList.remove('white-turn', 'black-turn');
+            if (currentTeam === 0) {
+                turnIndicator.classList.add('white-turn');
+            } else {
+                turnIndicator.classList.add('black-turn');
+            }
         }
     },
     undo: function() {
@@ -1007,9 +1019,25 @@ function updateMoveHistoryDisplay(moveManager) {
     // Clear existing history
     historyDiv.innerHTML = '';
     
-    // Get all moves from history
-    const moves = moveManager.moveHistory.toList();
+    // Get moves up to and including current position
+    const moveHistory = moveManager.moveHistory;
+    const moves = [];
+    let curr = moveHistory.root;
     
+    // Traverse from root to current position (including curr itself)
+    while (curr !== null) {
+        // Include the current node if it has a valid move
+        if (curr.move && curr.move.x0 !== undefined) {
+            moves.push(curr.move);
+        }
+        // Stop after we've added the current position
+        if (curr === moveHistory.curr) {
+            break;
+        }
+        curr = curr.next;
+    }
+    
+    // If we're at the root (no moves made), show "Game started..."
     if (moves.length === 0) {
         const emptyItem = document.createElement('div');
         emptyItem.className = 'move-item';
@@ -1018,19 +1046,8 @@ function updateMoveHistoryDisplay(moveManager) {
         return;
     }
     
-    // Filter out null moves (root node has null move)
-    const validMoves = moves.filter(move => move !== null && move !== undefined && move.x0 !== undefined);
-    
-    if (validMoves.length === 0) {
-        const emptyItem = document.createElement('div');
-        emptyItem.className = 'move-item';
-        emptyItem.textContent = 'Game started...';
-        historyDiv.appendChild(emptyItem);
-        return;
-    }
-    
     // Display moves up to current position
-    validMoves.forEach((move, index) => {
+    moves.forEach((move, index) => {
         // Skip if move is invalid
         if (!move || move.x0 === undefined) return;
         
