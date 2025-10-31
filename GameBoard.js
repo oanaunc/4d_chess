@@ -242,10 +242,10 @@ GameBoard.prototype = {
          * - BLACK (Team 1): W=4,5,6,7 (12 boards × 16 pieces = 192 pieces)
          * 
          * Center boards (Y=3 & Y=4, traditional chess-style):
-         * - Y=3: 2 boards at W=2,3 where both teams start facing each other
-         * - Y=4: 2 boards at W=4,5 where both teams start facing each other
+         * - Y=3: 2 boards at W=3,4 (centered, perfectly neutral)
+         * - Y=4: 2 boards at W=3,4 (centered, perfectly neutral)
          * - Each board: 16 white pieces + 16 black pieces = 32 pieces
-         * - Total: 128 pieces (64 per team) - evenly split across 2 layers
+         * - Total: 128 pieces (64 per team) - evenly split across 2 layers, perfectly centered
          * 
          * Top layers (Y=5,6,7 - MIRRORED):
          * - BLACK (Team 1): W=0,1,2,3 (12 boards × 16 pieces = 192 pieces) - swapped!
@@ -270,16 +270,16 @@ GameBoard.prototype = {
         }
         
         // Center boards: Traditional chess-style with pieces facing each other
-        // Split between Y=3 and Y=4 (2 boards each instead of 4 on one layer)
-        // Y=3: 2 boards at W=2,3
-        for (let w = 2; w <= 3; w++) {
+        // Split between Y=3 and Y=4, perfectly centered at W=3,4 (middle of 0-7)
+        // Y=3: 2 boards at W=3,4 (centered)
+        for (let w = 3; w <= 4; w++) {
             // White pieces on one side of the board (Z=0,1)
             this.placeTeamPieces(0, w, 3);
             // Black pieces on the other side of the same boards (Z=6,7)
             this.placeTeamPieces(1, w, 3);
         }
-        // Y=4: 2 boards at W=4,5 (fills the empty layer)
-        for (let w = 4; w <= 5; w++) {
+        // Y=4: 2 boards at W=3,4 (centered, same W positions)
+        for (let w = 3; w <= 4; w++) {
             // White pieces on one side of the board (Z=0,1)
             this.placeTeamPieces(0, w, 4);
             // Black pieces on the other side of the same boards (Z=6,7)
@@ -301,8 +301,8 @@ GameBoard.prototype = {
         
         console.log('✅ Placed 896 pieces: 448 White + 448 Black');
         console.log('   - Bottom (Y=0-2): 192 White (W=0-3) + 192 Black (W=4-7)');
-        console.log('   - Center (Y=3): 32 White + 32 Black on 2 shared boards (W=2,3)');
-        console.log('   - Center (Y=4): 32 White + 32 Black on 2 shared boards (W=4,5)');
+        console.log('   - Center (Y=3): 32 White + 32 Black on 2 shared boards (W=3,4) - CENTERED');
+        console.log('   - Center (Y=4): 32 White + 32 Black on 2 shared boards (W=3,4) - CENTERED');
         console.log('   - Top (Y=5-7): 192 Black (W=0-3) + 192 White (W=4-7) - MIRRORED');
         console.log('   ✓ All 8 Y layers now have pieces!');
         console.log(`📦 Pieces container has ${this.graphics.piecesContainer.children.length} meshes`);
