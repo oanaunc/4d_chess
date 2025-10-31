@@ -65,6 +65,13 @@ const LocalMode = {
             if (typeof scheduleBotMove === 'function') {
                 scheduleBotMove();
             }
+            
+            // IMPORTANT: After any move, deselect any selected piece to ensure
+            // the next player sees fresh legal moves (especially important when in check)
+            // This prevents stale move lists from before check was applied
+            if (typeof deselectPiece === 'function') {
+                deselectPiece();
+            }
         },
     undo: function() {
         if (this.moveHistory.undo()) {
@@ -376,7 +383,7 @@ function executeMove(x0, y0, z0, w0, x1, y1, z1, w1) {
         }
         
         // CRITICAL: Filter out illegal moves (moves that leave own king in check)
-        possibleMoves = filterIllegalMoves(
+        const legalMoves = filterIllegalMoves(
             gameBoard,
             x0, y0, z0, w0,
             possibleMoves,
@@ -384,11 +391,18 @@ function executeMove(x0, y0, z0, w0, x1, y1, z1, w1) {
         );
         
         // Check if the selected move is still in the legal moves after filtering
-        isValidMove = possibleMoves.some(move => 
+        isValidMove = legalMoves.some(move => 
             move.x === x1 && move.y === y1 && move.z === z1 && move.w === w1
         );
         if (!isValidMove) {
-            console.error('❌ Move is illegal - would leave own king in check or does not escape check');
+            const isInCheck = gameBoard.inCheck(sourcePiece.team);
+            if (isInCheck) {
+                console.error('❌ Move is illegal - you are in check and must escape check!');
+            } else {
+                console.error('❌ Move is illegal - would leave own king in check!');
+            }
+            // Deselect piece to force player to reselect and see updated legal moves
+            deselectPiece();
             return;
         }
         
@@ -400,7 +414,9 @@ function executeMove(x0, y0, z0, w0, x1, y1, z1, w1) {
             // Move completed - deselect piece and update UI
             console.log('✅ Move completed via moveManager');
             
-            // Deselect piece first (removes blue highlight)
+            // Deselect piece first (removes blue highlight) - IMPORTANT: This ensures
+            // that if opponent is now in check, their selected piece (if any) is deselected
+            // and they must reselect to see only legal escape moves
             deselectPiece();
             
             // Update piece counts
