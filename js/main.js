@@ -35,8 +35,8 @@ const LocalMode = {
 
 // Game state
 const gameState = {
-    currentW: 2,
-    currentY: 0,
+    currentW: 0,  // Show white pieces (W=0,1) by default
+    currentY: 0,  // Show bottom boards
     boardOpacity: 0.8,
     showGrid: true,
     highlightMoves: true,
@@ -147,12 +147,12 @@ function setupThreeJS() {
 }
 
 function setupLights() {
-    // Ambient light
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    // Stronger ambient light for even illumination of matte materials
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
     scene.add(ambientLight);
     
-    // Main directional light
-    const mainLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    // Softer main directional light to reduce harsh reflections
+    const mainLight = new THREE.DirectionalLight(0xffffff, 0.45);
     mainLight.position.set(500, 1000, 500);
     mainLight.castShadow = true;
     mainLight.shadow.mapSize.width = 2048;
@@ -165,15 +165,15 @@ function setupLights() {
     mainLight.shadow.camera.bottom = -1000;
     scene.add(mainLight);
     
-    // Secondary light
-    const secondaryLight = new THREE.DirectionalLight(0x00d4ff, 0.3);
+    // Softer secondary light (no blue tint for cleaner colors)
+    const secondaryLight = new THREE.DirectionalLight(0xffffff, 0.2);
     secondaryLight.position.set(-500, 500, -500);
     scene.add(secondaryLight);
     
-    // Point lights for accent
-    const pointLight1 = new THREE.PointLight(0x00d4ff, 0.5, 1000);
-    pointLight1.position.set(0, 500, 0);
-    scene.add(pointLight1);
+    // Fill light from below to reduce shadows
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.15);
+    fillLight.position.set(0, -500, 0);
+    scene.add(fillLight);
 }
 
 /* ============================================

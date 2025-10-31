@@ -235,26 +235,39 @@ GameBoard.prototype = {
     
     initializeStartingPositions: function(){
         /*
-         * Initialize all 256 pieces for 8x8x8x8 4D chess
+         * Initialize 256 pieces for 8x8x8x8 4D chess
          * 
-         * BLACK (Team 1): W = 0,1,2,3 (left side) - 128 pieces
-         * WHITE (Team 0): W = 4,5,6,7 (right side) - 128 pieces
+         * WHITE (Team 0): Y=0,1 across W=0,1,2,3 (8 boards × 16 pieces = 128 pieces)
+         * BLACK (Team 1): Y=6,7 across W=4,5,6,7 (8 boards × 16 pieces = 128 pieces)
          * 
-         * Each team has 4 complete boards (32 pieces per board)
+         * Each team occupies a "hyperplane edge" in the 4D space
          */
         
-        // Place BLACK pieces (W = 0,1,2,3)
-        for (let w = 0; w <= 3; w++) {
-            this.placeTeamPieces(1, w, 0); // team 1 (black), y=0 (base layer)
+        // Place WHITE pieces (Y=0,1 × W=0,1,2,3)
+        for (let y = 0; y <= 1; y++) {
+            for (let w = 0; w <= 3; w++) {
+                this.placeTeamPieces(0, w, y); // team 0 (white)
+            }
         }
         
-        // Place WHITE pieces (W = 4,5,6,7)
-        for (let w = 4; w <= 7; w++) {
-            this.placeTeamPieces(0, w, 0); // team 0 (white), y=0 (base layer)
+        // Place BLACK pieces (Y=6,7 × W=4,5,6,7)
+        for (let y = 6; y <= 7; y++) {
+            for (let w = 4; w <= 7; w++) {
+                this.placeTeamPieces(1, w, y); // team 1 (black)
+            }
         }
         
         console.log('✅ Placed 256 pieces: 128 White + 128 Black');
         console.log(`📦 Pieces container has ${this.graphics.piecesContainer.children.length} meshes`);
+        
+        // Check square colors for white's right corner on each board
+        console.log('🎨 Square colors (light=even sum):');
+        for (let w = 0; w <= 3; w++) {
+            const x = 7, z = 0; // White's back-right square
+            const sum = x + z + 0 + w; // y=0 for first level
+            const isLight = sum % 2 === 0;
+            console.log(`  W=${w}: Square (${x},0,${z},${w}) is ${isLight ? 'LIGHT ⬜' : 'DARK ⬛'} (sum=${sum})`);
+        }
         
         // Verify some pieces
         let whitePieces = 0, blackPieces = 0;

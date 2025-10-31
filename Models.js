@@ -4,25 +4,25 @@ const Models = {
     
     materials: {
         black: {
-            color: 0x202020,  // Dark charcoal
-            specular: 0x333333,
-            shininess: 50,
+            color: 0x1a1a1a,  // Very dark gray, almost black
+            specular: 0x111111,  // Minimal specularity
+            shininess: 15,  // Low shininess for matte finish
             flatShading: false,
             transparent: false,
             opacity: 1.0,
-            emissive: 0x404040,  // Self-glow for visibility
-            emissiveIntensity: 0.3
+            emissive: 0x000000,  // No self-glow
+            emissiveIntensity: 0
         },
     
         white: {
-            color: 0xFFFFFF,  // Bright white
-            specular: 0xffffff,
-            shininess: 60,
+            color: 0xf5f5f5,  // Off-white, not pure white
+            specular: 0x444444,  // Subtle specularity
+            shininess: 20,  // Low shininess for matte finish
             flatShading: false,
             transparent: false,
             opacity: 1.0,
-            emissive: 0xcccccc,  // Self-glow for visibility
-            emissiveIntensity: 0.4
+            emissive: 0x000000,  // No self-glow
+            emissiveIntensity: 0
 
         },
     
