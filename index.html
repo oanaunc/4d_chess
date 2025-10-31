@@ -131,25 +131,14 @@
             <section class="card nav-card">
                 <h3>🧭 4D Navigation</h3>
                 
-                <!-- W-axis slider -->
-                <div class="axis-control">
-                    <label>W-axis (4D Dimension)</label>
-                    <input type="range" id="w-slider" min="0" max="7" value="0" class="slider">
-                    <div class="axis-buttons">
-                        <button class="btn-nav" id="w-minus">◄ W-1</button>
-                        <span class="axis-value" id="w-value">0/7</span>
-                        <button class="btn-nav" id="w-plus">W+1 ►</button>
-                    </div>
-                </div>
-                
-                <!-- Y-axis slider -->
-                <div class="axis-control">
-                    <label>Y-axis (Height Layer)</label>
-                    <input type="range" id="y-slider" min="0" max="7" value="0" class="slider">
-                    <div class="axis-buttons">
-                        <button class="btn-nav" id="y-minus">▼ Y-1</button>
-                        <span class="axis-value" id="y-value">0/7</span>
-                        <button class="btn-nav" id="y-plus">Y+1 ▲</button>
+                <!-- 4D Axes Gizmo -->
+                <div class="gizmo-container">
+                    <canvas id="axes-gizmo-canvas" width="200" height="200"></canvas>
+                    <div class="gizmo-legend">
+                        <div class="gizmo-legend-item"><span class="gizmo-color" style="background: #ff0000;"></span>X: Left-Right</div>
+                        <div class="gizmo-legend-item"><span class="gizmo-color" style="background: #00ff00;"></span>Y: Height</div>
+                        <div class="gizmo-legend-item"><span class="gizmo-color" style="background: #0000ff;"></span>Z: Depth</div>
+                        <div class="gizmo-legend-item"><span class="gizmo-color" style="background: #00ffff;"></span>W: 4D Dimension</div>
                     </div>
                 </div>
                 

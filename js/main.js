@@ -312,58 +312,6 @@ function setupUIEvents() {
     document.getElementById('save-btn').addEventListener('click', saveGame);
     document.getElementById('load-btn').addEventListener('click', loadGame);
     
-    // W-axis controls
-    const wSlider = document.getElementById('w-slider');
-    wSlider.addEventListener('input', (e) => {
-        gameState.currentW = parseInt(e.target.value);
-        updateAxisDisplay('w', gameState.currentW);
-        updateBoardVisibility();
-    });
-    
-    document.getElementById('w-minus').addEventListener('click', () => {
-        if (gameState.currentW > 0) {
-            gameState.currentW--;
-            wSlider.value = gameState.currentW;
-            updateAxisDisplay('w', gameState.currentW);
-            updateBoardVisibility();
-        }
-    });
-    
-    document.getElementById('w-plus').addEventListener('click', () => {
-        if (gameState.currentW < 7) {
-            gameState.currentW++;
-            wSlider.value = gameState.currentW;
-            updateAxisDisplay('w', gameState.currentW);
-            updateBoardVisibility();
-        }
-    });
-    
-    // Y-axis controls
-    const ySlider = document.getElementById('y-slider');
-    ySlider.addEventListener('input', (e) => {
-        gameState.currentY = parseInt(e.target.value);
-        updateAxisDisplay('y', gameState.currentY);
-        updateBoardVisibility();
-    });
-    
-    document.getElementById('y-minus').addEventListener('click', () => {
-        if (gameState.currentY > 0) {
-            gameState.currentY--;
-            ySlider.value = gameState.currentY;
-            updateAxisDisplay('y', gameState.currentY);
-            updateBoardVisibility();
-        }
-    });
-    
-    document.getElementById('y-plus').addEventListener('click', () => {
-        if (gameState.currentY < 7) {
-            gameState.currentY++;
-            ySlider.value = gameState.currentY;
-            updateAxisDisplay('y', gameState.currentY);
-            updateBoardVisibility();
-        }
-    });
-    
     // Opacity slider
     const opacitySlider = document.getElementById('opacity-slider');
     opacitySlider.addEventListener('input', (e) => {
@@ -623,6 +571,147 @@ function updatePieceCount(white, black) {
 }
 
 /* ============================================
+   2D GIZMO VISUALIZATION
+   ============================================ */
+
+function update2DGizmo() {
+    const canvas = document.getElementById('axes-gizmo-canvas');
+    if (!canvas || !camera) return;
+    
+    const ctx = canvas.getContext('2d');
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const axisLength = 60;
+    const arrowSize = 14; // Larger arrows for better visibility
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Get camera's local axes in world space (these represent how camera sees the world)
+    const cameraRight = new THREE.Vector3(1, 0, 0);
+    cameraRight.applyQuaternion(camera.quaternion);
+    
+    const cameraUp = new THREE.Vector3(0, 1, 0);
+    cameraUp.applyQuaternion(camera.quaternion);
+    
+    const cameraForward = new THREE.Vector3(0, 0, -1);
+    cameraForward.applyQuaternion(camera.quaternion);
+    
+    // Project world axes onto camera's view plane
+    // World X axis (red) - projects along camera's right vector
+    const worldX = new THREE.Vector3(1, 0, 0);
+    const worldXScreenX = worldX.dot(cameraRight) * axisLength;
+    const worldXScreenY = -worldX.dot(cameraUp) * axisLength;
+    drawAxisWithArrow(ctx, centerX, centerY, worldXScreenX, worldXScreenY, '#ff0000', 'X', arrowSize);
+    
+    // World Y axis (green) - projects along camera's up vector  
+    const worldY = new THREE.Vector3(0, 1, 0);
+    const worldYScreenX = worldY.dot(cameraRight) * axisLength;
+    const worldYScreenY = -worldY.dot(cameraUp) * axisLength;
+    drawAxisWithArrow(ctx, centerX, centerY, worldYScreenX, worldYScreenY, '#00ff00', 'Y', arrowSize);
+    
+    // World Z axis (blue) - projects along camera's forward vector
+    const worldZ = new THREE.Vector3(0, 0, 1);
+    const worldZScreenX = worldZ.dot(cameraRight) * axisLength;
+    const worldZScreenY = -worldZ.dot(cameraUp) * axisLength;
+    drawAxisWithArrow(ctx, centerX, centerY, worldZScreenX, worldZScreenY, '#0000ff', 'Z', arrowSize);
+    
+    // W Axis (Cyan) - 4th dimension shown as diamond/square indicator
+    const wPosX = centerX + (worldXScreenX + worldYScreenX + worldZScreenX) * 0.25;
+    const wPosY = centerY + (worldXScreenY + worldYScreenY + worldZScreenY) * 0.25;
+    const wSize = 10;
+    
+    // Draw diamond shape (rotated square) for W axis
+    ctx.strokeStyle = '#00ffff';
+    ctx.fillStyle = '#00ffff';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(wPosX, wPosY - wSize); // Top
+    ctx.lineTo(wPosX + wSize, wPosY); // Right
+    ctx.lineTo(wPosX, wPosY + wSize); // Bottom
+    ctx.lineTo(wPosX - wSize, wPosY); // Left
+    ctx.closePath();
+    ctx.fill();
+    
+    // Outline for visibility
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    
+    // W label with shadow
+    const labelX = wPosX;
+    const labelY = wPosY - wSize - 14;
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Text shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillText('W', labelX + 1, labelY + 1);
+    
+    // Text
+    ctx.fillStyle = '#00ffff';
+    ctx.fillText('W', labelX, labelY);
+}
+
+function drawAxisWithArrow(ctx, x1, y1, dx, dy, color, label, arrowSize) {
+    const length = Math.sqrt(dx * dx + dy * dy);
+    if (length < 0.1) return; // Skip if axis is too short
+    
+    const unitX = dx / length;
+    const unitY = dy / length;
+    const tipX = x1 + dx;
+    const tipY = y1 + dy;
+    
+    // Draw axis line with thicker stroke
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(tipX, tipY);
+    ctx.stroke();
+    
+    // Draw arrowhead (larger and more visible)
+    const arrowAngle = Math.PI / 5; // 36 degrees for wider arrow
+    const arrowLength = arrowSize;
+    
+    // Calculate arrow points
+    const angle = Math.atan2(dy, dx);
+    const arrowX1 = tipX - arrowLength * Math.cos(angle - arrowAngle);
+    const arrowY1 = tipY - arrowLength * Math.sin(angle - arrowAngle);
+    const arrowX2 = tipX - arrowLength * Math.cos(angle + arrowAngle);
+    const arrowY2 = tipY - arrowLength * Math.sin(angle + arrowAngle);
+    
+    // Draw filled arrowhead with outline for visibility
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(arrowX1, arrowY1);
+    ctx.lineTo(arrowX2, arrowY2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke(); // Outline for better visibility
+    
+    // Draw label with shadow for readability
+    ctx.font = 'bold 13px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const labelOffset = 22;
+    const labelX = tipX + unitX * labelOffset;
+    const labelY = tipY + unitY * labelOffset;
+    
+    // Text shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillText(label, labelX + 1, labelY + 1);
+    
+    // Text
+    ctx.fillStyle = color;
+    ctx.fillText(label, labelX, labelY);
+}
+
+/* ============================================
    ANIMATION LOOP
    ============================================ */
 
@@ -631,6 +720,9 @@ function animate() {
     
     // Update controls
     controls.update();
+    
+    // Update 2D gizmo visualization
+    update2DGizmo();
     
     // TODO: Update game animations
     

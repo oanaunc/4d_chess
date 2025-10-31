@@ -858,7 +858,177 @@ function BoardGraphics(gameBoard) {
 		}
 	}
 	
+	// Note: 2D gizmo is now in the UI panel, not in 3D space
+	
 }
+
+// Helper function to create a 4D coordinate axes gizmo (3DS Max style - top-right corner)
+BoardGraphics.prototype.createAxesGizmo = function() {
+	const gizmoSize = 120; // Length of axes
+	const gizmoGroup = new THREE.Group();
+	
+	// X Axis (Red) - horizontal within each board (left-right on the 2D board)
+	const xGeometry = new THREE.CylinderGeometry(2.5, 2.5, gizmoSize, 8);
+	const xMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+	const xAxis = new THREE.Mesh(xGeometry, xMaterial);
+	xAxis.rotation.z = Math.PI / 2;
+	xAxis.position.set(gizmoSize / 2, 0, 0);
+	gizmoGroup.add(xAxis);
+	
+	// Add X label with description
+	const xLabel = this.createAxisLabel('X', 0xff0000);
+	xLabel.position.set(gizmoSize + 20, 0, 0);
+	gizmoGroup.add(xLabel);
+	
+	// Y Axis (Green) - height/layer dimension (vertical stacking)
+	const yGeometry = new THREE.CylinderGeometry(2.5, 2.5, gizmoSize, 8);
+	const yMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+	const yAxis = new THREE.Mesh(yGeometry, yMaterial);
+	yAxis.position.set(0, gizmoSize / 2, 0);
+	gizmoGroup.add(yAxis);
+	
+	// Add Y label with description
+	const yLabel = this.createAxisLabel('Y', 0x00ff00);
+	yLabel.position.set(0, gizmoSize + 20, 0);
+	gizmoGroup.add(yLabel);
+	
+	// Z Axis (Blue) - depth within each board (forward-back on the 2D board)
+	const zGeometry = new THREE.CylinderGeometry(2.5, 2.5, gizmoSize, 8);
+	const zMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+	const zAxis = new THREE.Mesh(zGeometry, zMaterial);
+	zAxis.rotation.x = Math.PI / 2;
+	zAxis.position.set(0, 0, gizmoSize / 2);
+	gizmoGroup.add(zAxis);
+	
+	// Add Z label with description
+	const zLabel = this.createAxisLabel('Z', 0x0000ff);
+	zLabel.position.set(0, 0, gizmoSize + 20);
+	gizmoGroup.add(zLabel);
+	
+	// W Axis (Cyan) - 4th dimension (different parallel boards)
+	// Show as a separate indicator since it can't be visualized in 3D
+	const wSphereGeometry = new THREE.SphereGeometry(7, 16, 16);
+	const wMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.5 });
+	const wIndicator = new THREE.Mesh(wSphereGeometry, wMaterial);
+	wIndicator.position.set(gizmoSize * 0.3, gizmoSize * 0.3, gizmoSize * 0.3);
+	gizmoGroup.add(wIndicator);
+	
+	// Connect W with line to show it's a 4th dimension
+	const wLineGeometry = new THREE.BufferGeometry().setFromPoints([
+		new THREE.Vector3(0, 0, 0),
+		new THREE.Vector3(gizmoSize * 0.3, gizmoSize * 0.3, gizmoSize * 0.3)
+	]);
+	const wLineMaterial = new THREE.LineBasicMaterial({ color: 0x00ffff, linewidth: 2 });
+	const wLine = new THREE.Line(wLineGeometry, wLineMaterial);
+	gizmoGroup.add(wLine);
+	
+	// Add W label
+	const wLabel = this.createAxisLabel('W', 0x00ffff);
+	wLabel.position.set(gizmoSize * 0.45, gizmoSize * 0.45, gizmoSize * 0.45);
+	gizmoGroup.add(wLabel);
+	
+	// Add gizmo to scene (will be positioned in animation loop)
+	scene.add(gizmoGroup);
+	this.axesGizmo = gizmoGroup;
+	this.gizmoDistance = 200; // Distance from camera
+	
+	console.log('🎯 4D Axes Gizmo created (3DS Max style)');
+}
+
+// Update gizmo position to stay in top-right corner (3DS Max style)
+BoardGraphics.prototype.updateGizmoPosition = function(camera) {
+	if (!this.axesGizmo) return;
+	
+	// Calculate viewport corners in world space
+	// We want top-right corner, which is: right on X, top on Y
+	const aspect = window.innerWidth / window.innerHeight;
+	const fov = camera.fov * (Math.PI / 180);
+	const distance = this.gizmoDistance;
+	
+	// Calculate viewport dimensions at the gizmo distance
+	const height = 2 * Math.tan(fov / 2) * distance;
+	const width = height * aspect;
+	
+	// Position in camera-relative space (top-right corner)
+	// In camera space: +X is right, +Y is up, -Z is forward
+	const rightOffset = width * 0.35;  // 35% from center to right edge
+	const topOffset = height * 0.35;    // 35% from center to top edge
+	
+	// Get camera's local axes in world space
+	// Camera's local X axis (right) in world space
+	const cameraRight = new THREE.Vector3(1, 0, 0);
+	cameraRight.applyQuaternion(camera.quaternion);
+	
+	// Camera's local Y axis (up) in world space
+	const cameraUp = new THREE.Vector3(0, 1, 0);
+	cameraUp.applyQuaternion(camera.quaternion);
+	
+	// Camera's local -Z axis (forward) in world space
+	const cameraForward = new THREE.Vector3(0, 0, -1);
+	cameraForward.applyQuaternion(camera.quaternion);
+	
+	// Position gizmo in front of camera, offset to top-right
+	const gizmoPosition = camera.position.clone();
+	gizmoPosition.add(cameraForward.multiplyScalar(distance));
+	gizmoPosition.add(cameraRight.multiplyScalar(rightOffset));
+	gizmoPosition.add(cameraUp.multiplyScalar(topOffset));
+	
+	this.axesGizmo.position.copy(gizmoPosition);
+	
+	// Make gizmo rotate with camera (align with camera's orientation)
+	this.axesGizmo.quaternion.copy(camera.quaternion);
+}
+
+// Helper to create axis label (simplified for corner gizmo)
+BoardGraphics.prototype.createAxisLabel = function(text, color) {
+	const canvas = document.createElement('canvas');
+	const context = canvas.getContext('2d');
+	canvas.width = 128;
+	canvas.height = 64;
+	
+	context.fillStyle = 'rgba(0,0,0,0.85)';
+	context.fillRect(0, 0, canvas.width, canvas.height);
+	context.font = 'bold 40px Arial';
+	context.fillStyle = '#' + color.toString(16).padStart(6, '0');
+	context.textAlign = 'center';
+	context.textBaseline = 'middle';
+	context.fillText(text, canvas.width / 2, canvas.height / 2);
+	
+	const texture = new THREE.CanvasTexture(canvas);
+	texture.needsUpdate = true;
+	const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+	const sprite = new THREE.Sprite(spriteMaterial);
+	sprite.scale.set(40, 20, 1);
+	return sprite;
+}
+
+// Helper to create legend label
+BoardGraphics.prototype.createLegendLabel = function(text) {
+	const lines = text.split('\n');
+	const canvas = document.createElement('canvas');
+	const context = canvas.getContext('2d');
+	canvas.width = 300;
+	canvas.height = lines.length * 40 + 20;
+	
+	context.fillStyle = 'rgba(0,0,0,0.9)';
+	context.fillRect(0, 0, canvas.width, canvas.height);
+	context.font = 'bold 32px Arial';
+	context.fillStyle = '#ffffff';
+	context.textAlign = 'left';
+	context.textBaseline = 'top';
+	
+	lines.forEach((line, index) => {
+		context.fillText(line, 10, 10 + index * 40);
+	});
+	
+	const texture = new THREE.CanvasTexture(canvas);
+	texture.needsUpdate = true;
+	const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+	const sprite = new THREE.Sprite(spriteMaterial);
+	sprite.scale.set(90, lines.length * 12 + 6, 1);
+	return sprite;
+}
+
 
 BoardGraphics.checkerboard = function(segments=8, boardSize=100, z=0, w=0, opacity=0.5){
     
