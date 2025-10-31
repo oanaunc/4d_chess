@@ -87,6 +87,14 @@ const selectionSystem = {
 function init() {
     console.log('🎮 Initializing 4D Chess...');
     
+    // Suppress browser extension errors (common Chrome extension issue)
+    window.addEventListener('error', (e) => {
+        if (e.message && e.message.includes('message channel closed')) {
+            e.preventDefault();
+            return false;
+        }
+    }, true);
+    
     // Get canvas and loading screen
     canvas = document.getElementById('game-canvas');
     loadingScreen = document.getElementById('loading-screen');
@@ -453,29 +461,44 @@ function setupUIEvents() {
         updateBoardOpacity();
     });
     
-    // View options checkboxes
-    document.getElementById('show-grid').addEventListener('change', (e) => {
-        gameState.showGrid = e.target.checked;
-        toggleGrid(gameState.showGrid);
-    });
+    // View options checkboxes (removed from UI, but keep functionality for keyboard shortcuts)
+    const showGridCheckbox = document.getElementById('show-grid');
+    if (showGridCheckbox) {
+        showGridCheckbox.addEventListener('change', (e) => {
+            gameState.showGrid = e.target.checked;
+            toggleGrid(gameState.showGrid);
+        });
+    }
     
-    document.getElementById('highlight-moves').addEventListener('change', (e) => {
-        gameState.highlightMoves = e.target.checked;
-    });
+    const highlightMovesCheckbox = document.getElementById('highlight-moves');
+    if (highlightMovesCheckbox) {
+        highlightMovesCheckbox.addEventListener('change', (e) => {
+            gameState.highlightMoves = e.target.checked;
+        });
+    }
     
-    document.getElementById('show-coords').addEventListener('change', (e) => {
-        gameState.showCoords = e.target.checked;
-        toggleCoordinates(gameState.showCoords);
-    });
+    const showCoordsCheckbox = document.getElementById('show-coords');
+    if (showCoordsCheckbox) {
+        showCoordsCheckbox.addEventListener('change', (e) => {
+            gameState.showCoords = e.target.checked;
+            toggleCoordinates(gameState.showCoords);
+        });
+    }
     
-    document.getElementById('animate-pieces').addEventListener('change', (e) => {
-        gameState.animatePieces = e.target.checked;
-    });
+    const animatePiecesCheckbox = document.getElementById('animate-pieces');
+    if (animatePiecesCheckbox) {
+        animatePiecesCheckbox.addEventListener('change', (e) => {
+            gameState.animatePieces = e.target.checked;
+        });
+    }
     
-    document.getElementById('show-all-boards').addEventListener('change', (e) => {
-        gameState.showAllBoards = e.target.checked;
-        updateBoardVisibility();
-    });
+    const showAllBoardsCheckbox = document.getElementById('show-all-boards');
+    if (showAllBoardsCheckbox) {
+        showAllBoardsCheckbox.addEventListener('change', (e) => {
+            gameState.showAllBoards = e.target.checked;
+            updateBoardVisibility();
+        });
+    }
     
     // Camera controls
     document.getElementById('reset-camera').addEventListener('click', resetCamera);
@@ -541,14 +564,17 @@ function setupKeyboardShortcuts() {
         // View toggles
         else if (e.key === 'g' || e.key === 'G') {
             gameState.showGrid = !gameState.showGrid;
-            document.getElementById('show-grid').checked = gameState.showGrid;
+            const showGridCheckbox = document.getElementById('show-grid');
+            if (showGridCheckbox) showGridCheckbox.checked = gameState.showGrid;
             toggleGrid(gameState.showGrid);
         } else if (e.key === 'h' || e.key === 'H') {
             gameState.highlightMoves = !gameState.highlightMoves;
-            document.getElementById('highlight-moves').checked = gameState.highlightMoves;
+            const highlightMovesCheckbox = document.getElementById('highlight-moves');
+            if (highlightMovesCheckbox) highlightMovesCheckbox.checked = gameState.highlightMoves;
         } else if (e.key === 'c' || e.key === 'C') {
             gameState.showCoords = !gameState.showCoords;
-            document.getElementById('show-coords').checked = gameState.showCoords;
+            const showCoordsCheckbox = document.getElementById('show-coords');
+            if (showCoordsCheckbox) showCoordsCheckbox.checked = gameState.showCoords;
             toggleCoordinates(gameState.showCoords);
         }
     });

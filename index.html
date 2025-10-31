@@ -17,7 +17,6 @@
 <body>
     <!-- Header Bar -->
     <header class="header-bar">
-        <button class="menu-btn" id="menu-btn">☰</button>
         <h1 class="title">🎮 4D CHESS</h1>
         <div class="turn-indicator" id="turn-indicator">
             <span class="turn-icon" id="turn-icon">♔</span>
@@ -26,7 +25,6 @@
         <div class="check-indicator" id="check-indicator" style="display:none;">
             <span class="check-text">⚠️ CHECK!</span>
         </div>
-        <button class="settings-btn" id="settings-btn">⚙️</button>
     </header>
 
     <div class="main-container">
@@ -101,38 +99,51 @@
                 </div>
             </section>
             
-            <!-- Piece Tutorial -->
-            <section class="card tutorial-card">
-                <h3>📖 4D Chess Pieces</h3>
-                
-                <!-- Navigation -->
-                <div class="tutorial-nav">
-                    <button class="btn-nav-small" id="tutorial-prev">◄</button>
-                    <span class="tutorial-page-indicator">
-                        <span id="tutorial-page-number">1</span> / 6
-                    </span>
-                    <button class="btn-nav-small" id="tutorial-next">►</button>
-                </div>
-                
-                <!-- Piece Viewer -->
-                <div class="tutorial-viewer">
-                    <canvas id="tutorial-piece-canvas"></canvas>
-                    <div class="tutorial-controls">
-                        <span class="tutorial-hint">💡 Drag to rotate</span>
+            <!-- Camera -->
+            <section class="card camera-card">
+                <h3>📷 Camera</h3>
+                <button class="btn btn-secondary btn-block" id="reset-camera">
+                    🎯 Reset View
+                </button>
+                <button class="btn btn-secondary btn-block" id="top-view">
+                    ⬆️ Top View
+                </button>
+                <button class="btn btn-secondary btn-block" id="side-view">
+                    ➡️ Side View
+                </button>
+            </section>
+            
+            <!-- Mouse Controls -->
+            <section class="card help-card">
+                <h3>🖱️ Mouse Controls</h3>
+                <div class="shortcut-list">
+                    <div class="shortcut-item">
+                        <span class="key">Left Click</span>
+                        <span>Rotate view</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span class="key">Right Click</span>
+                        <span>Pan (move view)</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span class="key">Scroll</span>
+                        <span>Zoom in/out</span>
                     </div>
                 </div>
-                
-                <!-- Piece Name -->
-                <h4 id="tutorial-piece-name" class="tutorial-piece-name">Rook</h4>
-                
-                <!-- Movement Description -->
-                <div class="tutorial-description" id="tutorial-description">
-                    <!-- Content will be populated by JavaScript -->
-                </div>
-                
-                <!-- Movement Examples -->
-                <div class="tutorial-examples" id="tutorial-examples">
-                    <!-- Examples will be populated by JavaScript -->
+            </section>
+            
+            <!-- Keyboard Shortcuts Help -->
+            <section class="card help-card">
+                <h3>⌨️ Keyboard</h3>
+                <div class="shortcut-list">
+                    <div class="shortcut-item">
+                        <span class="key">R</span>
+                        <span>Reset camera</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span class="key">ESC</span>
+                        <span>Deselect piece</span>
+                    </div>
                 </div>
             </section>
         </aside>
@@ -186,90 +197,38 @@
                 </div>
             </section>
             
-            <section class="card view-card">
-                <h3>🎨 View Options</h3>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="show-grid" checked>
-                    <span>Show Grid</span>
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="highlight-moves" checked>
-                    <span>Highlight Possible Moves</span>
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="show-coords">
-                    <span>Show Coordinates</span>
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="animate-pieces" checked>
-                    <span>Animate Pieces</span>
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="show-all-boards">
-                    <span>Show All Boards</span>
-                </label>
-            </section>
-            
-            <section class="card camera-card">
-                <h3>📷 Camera</h3>
-                <button class="btn btn-secondary btn-block" id="reset-camera">
-                    🎯 Reset View
-                </button>
-                <button class="btn btn-secondary btn-block" id="top-view">
-                    ⬆️ Top View
-                </button>
-                <button class="btn btn-secondary btn-block" id="side-view">
-                    ➡️ Side View
-                </button>
-            </section>
-            
-            <!-- Mouse Controls -->
-            <section class="card help-card">
-                <h3>🖱️ Mouse Controls</h3>
-                <div class="shortcut-list">
-                    <div class="shortcut-item">
-                        <span class="key">Left Click</span>
-                        <span>Rotate view</span>
-                    </div>
-                    <div class="shortcut-item">
-                        <span class="key">Right Click</span>
-                        <span>Pan (move view)</span>
-                    </div>
-                    <div class="shortcut-item">
-                        <span class="key">Scroll</span>
-                        <span>Zoom in/out</span>
+            <!-- Piece Tutorial -->
+            <section class="card tutorial-card">
+                <h3>📖 4D Chess Pieces</h3>
+                
+                <!-- Navigation -->
+                <div class="tutorial-nav">
+                    <button class="btn-nav-small" id="tutorial-prev">◄</button>
+                    <span class="tutorial-page-indicator">
+                        <span id="tutorial-page-number">1</span> / 6
+                    </span>
+                    <button class="btn-nav-small" id="tutorial-next">►</button>
+                </div>
+                
+                <!-- Piece Viewer -->
+                <div class="tutorial-viewer">
+                    <canvas id="tutorial-piece-canvas"></canvas>
+                    <div class="tutorial-controls">
+                        <span class="tutorial-hint">💡 Drag to rotate</span>
                     </div>
                 </div>
-            </section>
-            
-            <!-- Keyboard Shortcuts Help -->
-            <section class="card help-card">
-                <h3>⌨️ Keyboard</h3>
-                <div class="shortcut-list">
-                    <div class="shortcut-item">
-                        <span class="key">W/S</span>
-                        <span>Change W-axis</span>
-                    </div>
-                    <div class="shortcut-item">
-                        <span class="key">Q/E</span>
-                        <span>Change Y-axis</span>
-                    </div>
-                    <div class="shortcut-item">
-                        <span class="key">R</span>
-                        <span>Reset camera</span>
-                    </div>
-                    <div class="shortcut-item">
-                        <span class="key">ESC</span>
-                        <span>Deselect piece</span>
-                    </div>
-                    <div class="shortcut-item">
-                        <span class="key">Ctrl+Z</span>
-                        <span>Undo</span>
-                    </div>
-                    <div class="shortcut-item">
-                        <span class="key">Ctrl+Y</span>
-                        <span>Redo</span>
-                    </div>
+                
+                <!-- Piece Name -->
+                <h4 id="tutorial-piece-name" class="tutorial-piece-name">Rook</h4>
+                
+                <!-- Movement Description -->
+                <div class="tutorial-description" id="tutorial-description">
+                    <!-- Content will be populated by JavaScript -->
+                </div>
+                
+                <!-- Movement Examples -->
+                <div class="tutorial-examples" id="tutorial-examples">
+                    <!-- Examples will be populated by JavaScript -->
                 </div>
             </section>
         </aside>
