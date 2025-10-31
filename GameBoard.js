@@ -235,29 +235,30 @@ GameBoard.prototype = {
     
     initializeStartingPositions: function(){
         /*
-         * Initialize 256 pieces for 8x8x8x8 4D chess
+         * Initialize pieces for 8x8x8x8 4D chess
          * 
-         * WHITE (Team 0): Y=0,1 across W=0,1,2,3 (8 boards × 16 pieces = 128 pieces)
-         * BLACK (Team 1): Y=6,7 across W=4,5,6,7 (8 boards × 16 pieces = 128 pieces)
+         * WHITE (Team 0): Y=0,1,2,3 across W=0,1,2,3 (16 boards × 16 pieces = 256 pieces)
+         * BLACK (Team 1): Y=4,5,6,7 across W=4,5,6,7 (16 boards × 16 pieces = 256 pieces)
          * 
-         * Each team occupies a "hyperplane edge" in the 4D space
+         * Each team occupies 4 Y-layers (height levels), creating a "4 by 4" distribution
+         * visible as height on screen
          */
         
-        // Place WHITE pieces (Y=0,1 × W=0,1,2,3)
-        for (let y = 0; y <= 1; y++) {
+        // Place WHITE pieces (Y=0,1,2,3 × W=0,1,2,3) - 4 Y layers
+        for (let y = 0; y <= 3; y++) {
             for (let w = 0; w <= 3; w++) {
                 this.placeTeamPieces(0, w, y); // team 0 (white)
             }
         }
         
-        // Place BLACK pieces (Y=6,7 × W=4,5,6,7)
-        for (let y = 6; y <= 7; y++) {
+        // Place BLACK pieces (Y=4,5,6,7 × W=4,5,6,7) - 4 Y layers
+        for (let y = 4; y <= 7; y++) {
             for (let w = 4; w <= 7; w++) {
                 this.placeTeamPieces(1, w, y); // team 1 (black)
             }
         }
         
-        console.log('✅ Placed 256 pieces: 128 White + 128 Black');
+        console.log('✅ Placed 512 pieces: 256 White + 256 Black');
         console.log(`📦 Pieces container has ${this.graphics.piecesContainer.children.length} meshes`);
         
         // Check square colors for white's right corner on each board
