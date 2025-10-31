@@ -269,9 +269,19 @@ GameBoard.prototype = {
         // Debug first piece details
         if (this.graphics.piecesContainer.children.length > 0) {
             const firstMesh = this.graphics.piecesContainer.children[0];
+            
+            // Calculate piece height
+            const bbox = new THREE.Box3().setFromObject(firstMesh);
+            const pieceHeight = bbox.max.y - bbox.min.y;
+            const pieceBottom = bbox.min.y;
+            const pieceTop = bbox.max.y;
+            
             console.log('🔬 First mesh details:', {
                 position: {x: firstMesh.position.x, y: firstMesh.position.y, z: firstMesh.position.z},
                 scale: {x: firstMesh.scale.x, y: firstMesh.scale.y, z: firstMesh.scale.z},
+                height: pieceHeight,
+                bottom: pieceBottom,
+                top: pieceTop,
                 visible: firstMesh.visible,
                 material: {
                     color: '#' + firstMesh.material.color.getHexString(),
@@ -283,18 +293,19 @@ GameBoard.prototype = {
                 }
             });
             
+            // Log square center for first piece position (0,0,0,4)
+            const firstSquareCenter = this.graphics.boardCoordinates(0, 0, 0, 4);
+            console.log('📍 First square (0,0,0,4) center:', {
+                x: firstSquareCenter.x,
+                y: firstSquareCenter.y,
+                z: firstSquareCenter.z
+            });
+            
             console.log('🎯 Camera looking at pieces from:', {
                 cameraPos: {x: camera.position.x, y: camera.position.y, z: camera.position.z},
                 cameraTarget: {x: controls.target.x, y: controls.target.y, z: controls.target.z},
                 piecePos: {x: firstMesh.position.x, y: firstMesh.position.y, z: firstMesh.position.z}
             });
-            
-            // Test: Make first piece HUGE and bright to ensure it's visible
-            console.log('🧪 Making first piece HUGE and BRIGHT for testing...');
-            firstMesh.scale.set(50, 50, 50);  // MASSIVE
-            firstMesh.material.color.setHex(0xff0000);  // BRIGHT RED
-            firstMesh.material.emissive = new THREE.Color(0xff0000);  // Self-illuminated
-            firstMesh.material.emissiveIntensity = 0.5;
         }
     },
     
@@ -547,6 +558,7 @@ BoardGraphics.prototype = {
 	boardCoordinates: function(x, y, z, w){
         
         // Get world coordinates from board coordinates
+        // NOTE: Returns position in world space (relative to piecesContainer since pieces are added there)
         
         const zero = new THREE.Vector3((0.5 * this.squareSize) - (0.5 * this.squareSize * this.n), 0, (0.5 * this.squareSize * this.n) - (0.5 * this.squareSize))
         
@@ -555,7 +567,8 @@ BoardGraphics.prototype = {
         const zShift = -(z * this.squareSize + w * this.horizontalIncrement)
         const translation = new THREE.Vector3(xShift, yShift, zShift)
         
-        return zero.add(translation).add(this.boardContainer.position)
+        // Don't add container positions since pieces/boards are in separate containers at same origin
+        return zero.add(translation)
         
     },
 	
@@ -563,15 +576,13 @@ BoardGraphics.prototype = {
         
         // Get board coordinates from world coordinates
         const zero = new THREE.Vector3((0.5 * this.squareSize) - (0.5 * this.squareSize * this.n), 0, (0.5 * this.squareSize * this.n) - (0.5 * this.squareSize))
-        pos = pos.clone().sub(zero).sub(this.boardContainer.position)
+        pos = pos.clone().sub(zero)  // Don't subtract container position
         
         let x = Math.floor(pos.x / this.squareSize)
         let y = Math.floor(pos.y / this.verticalIncrement)
         let numGaps = Math.floor(-pos.z / this.horizontalIncrement)
         let z = Math.floor((-pos.z - (numGaps * this.horizontalIncrement)) / this.squareSize)
         let w = numGaps
-        
-//        pos.sub(this.boardContainer.position)
         
         return new THREE.Vector4(x, y, z, w)
     },
@@ -659,6 +670,7 @@ BoardGraphics.prototype = {
 		// Create mesh (without game object), add it to the scene, and return the mesh
 		const worldPos = this.boardCoordinates(x, y, z, w)
 		const material = team === 0 ? Models.materials.white : Models.materials.black
+		
 		
 		const mesh = Models.createMesh(typeString, material, worldPos.x, worldPos.y, worldPos.z)
 		
@@ -759,6 +771,13 @@ function BoardGraphics(gameBoard) {
 	this.mesh.add(this.possibleMovesContainer)
 	scene.add(this.mesh);
 	
+	// Log container positions
+	console.log('🎨 Container positions:', {
+		mesh: this.mesh.position,
+		boardContainer: this.boardContainer.position,
+		piecesContainer: this.piecesContainer.position
+	});
+	
 	let bottom = 0;
 	let left = 0;
 	for (let w = 0; w < this.n; w++){
@@ -767,6 +786,15 @@ function BoardGraphics(gameBoard) {
 			checker.position.set(0, bottom + i*this.verticalIncrement, left - w*this.horizontalIncrement)
 			rotateObject(checker, -90, 0, 0)
 			this.boardContainer.add(checker)
+			
+			// Log first board (y=0, w=0) square positions
+			if (i === 0 && w === 0) {
+				console.log('📐 First board (y=0, w=0) created at:', {
+					boardPosition: checker.position,
+					boardHeight: this.boardHeight,
+					topSurface: checker.position.y + this.boardHeight/2
+				});
+			}
 		}
 	}
 	

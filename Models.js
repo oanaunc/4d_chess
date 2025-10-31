@@ -1,24 +1,28 @@
 const Models = {
     
-    SCALE_FACTOR: 9,  // Scale for chess pieces (matching example game)
+    SCALE_FACTOR: 1000,  // Scale pieces to 50% of previous size
     
     materials: {
         black: {
-            color: 0x404040,  // Medium gray - visible against dark background
-            specular: 0x222222,
-            shininess: 30,
+            color: 0x202020,  // Dark charcoal
+            specular: 0x333333,
+            shininess: 50,
             flatShading: false,
             transparent: false,
-            opacity: 1.0
+            opacity: 1.0,
+            emissive: 0x404040,  // Self-glow for visibility
+            emissiveIntensity: 0.3
         },
     
         white: {
-            color: 0xFFFFFF,  // Bright white for maximum visibility
-            specular: 0xcccccc,
-            shininess: 40,
+            color: 0xFFFFFF,  // Bright white
+            specular: 0xffffff,
+            shininess: 60,
             flatShading: false,
             transparent: false,
-            opacity: 1.0
+            opacity: 1.0,
+            emissive: 0xcccccc,  // Self-glow for visibility
+            emissiveIntensity: 0.4
 
         },
     

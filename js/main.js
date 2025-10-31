@@ -208,11 +208,39 @@ function initializeGame() {
                     
                     // Position camera based on actual board center (like the example game does!)
                     const boardCenter = gameBoard.graphics.getCenter();
-                    console.log('📐 Board center calculated:', boardCenter);
+                    console.log('📐 Board center calculated:', {
+                        x: boardCenter.x,
+                        y: boardCenter.y,
+                        z: boardCenter.z
+                    });
                     
-                    camera.position.set(800, 600, boardCenter.z + 800);
+                    const newCameraPos = {
+                        x: 800,
+                        y: 600,
+                        z: boardCenter.z + 800
+                    };
+                    
+                    console.log('📷 Setting camera to:', newCameraPos);
+                    console.log('🎯 Setting camera target to:', {
+                        x: boardCenter.x,
+                        y: boardCenter.y,
+                        z: boardCenter.z
+                    });
+                    
+                    camera.position.set(newCameraPos.x, newCameraPos.y, newCameraPos.z);
                     controls.target.set(boardCenter.x, boardCenter.y, boardCenter.z);
                     controls.update();
+                    
+                    console.log('✅ Camera updated. Current position:', {
+                        x: camera.position.x,
+                        y: camera.position.y,
+                        z: camera.position.z
+                    });
+                    console.log('✅ Camera target:', {
+                        x: controls.target.x,
+                        y: controls.target.y,
+                        z: controls.target.z
+                    });
                     
                     // Position grid helper under board center
                     if (window.gridHelper) {
