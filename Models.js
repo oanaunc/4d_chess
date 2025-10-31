@@ -4,24 +4,26 @@ const Models = {
     
     materials: {
         black: {
-            color: 0x1a1a1a,  // Very dark gray, almost black
-            specular: 0x111111,  // Minimal specularity
-            shininess: 15,  // Low shininess for matte finish
+            // Bluish-purple dark gray to match board's dark squares (e.g. 0x444464)
+            color: 0x3b3f63,
+            specular: 0x222237,
+            shininess: 25,
             flatShading: false,
             transparent: false,
             opacity: 1.0,
-            emissive: 0x000000,  // No self-glow
+            emissive: 0x000000,
             emissiveIntensity: 0
         },
     
         white: {
-            color: 0xf5f5f5,  // Off-white, not pure white
-            specular: 0x444444,  // Subtle specularity
-            shininess: 20,  // Low shininess for matte finish
+            // Very light lilac to harmonize with light squares (e.g. 0xccccfc)
+            color: 0xeeeefe,
+            specular: 0x8888aa,
+            shininess: 30,
             flatShading: false,
             transparent: false,
             opacity: 1.0,
-            emissive: 0x000000,  // No self-glow
+            emissive: 0x000000,
             emissiveIntensity: 0
 
         },
@@ -176,7 +178,7 @@ const Models = {
         mesh.position.set(x, y, z)
 
         // Per-piece fixes for inverted surfaces
-        if (piece === 'pawn' || piece === 'bishop') {
+        if (piece === 'pawn' || piece === 'bishop' || piece === 'queen') {
             mesh.material.side = THREE.DoubleSide;
         }
         
