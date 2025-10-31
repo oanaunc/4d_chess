@@ -647,40 +647,78 @@ BoardGraphics.prototype = {
         return new THREE.Vector4(x, y, z, w)
     },
 	
-	showPossibleMoves: function(locations, piece, materialScheme={}, canRayCast){
+	showPossibleMoves: function(locations, piece, materialScheme={}, canRayCast=false){
+		// Default material scheme: transparent green for moves, transparent pieces for captures
 		materialScheme = Object.assign({
 			0: {
-				moveMaterial: Models.materials.green,
-				attackMaterial: Models.materials.red
+				moveMaterial: {
+					color: 0x90EE90, // Light green
+					transparent: true,
+					opacity: 0.5
+				},
+				attackMaterial: {
+					color: 0xeeeefe, // White piece color, transparent
+					transparent: true,
+					opacity: 0.5
+				}
 			},
 			1: {
-				moveMaterial: Models.materials.green,
-				attackMaterial: Models.materials.red
+				moveMaterial: {
+					color: 0x90EE90, // Light green
+					transparent: true,
+					opacity: 0.5
+				},
+				attackMaterial: {
+					color: 0x3b3f63, // Black piece color, transparent
+					transparent: true,
+					opacity: 0.5
+				}
 			},
 		}, materialScheme)
 		
         this.hidePossibleMoves();
 		
+        if (!locations || locations.length === 0) {
+			return;
+		}
+		
         locations.forEach(pos => {
-			
-			coordinates = this.boardCoordinates(pos.x, pos.y, pos.z, pos.w)
+			const coordinates = this.boardCoordinates(pos.x, pos.y, pos.z, pos.w);
 			let material;
 			let shadowPiece;
+			let pieceType;
+			
 			if(pos.possibleCapture){
-				const attackedPiece = this.gameBoard.pieces[pos.x][pos.y][pos.z][pos.w]
+				// Show transparent version of the piece being captured
+				const attackedPiece = this.gameBoard.pieces[pos.x][pos.y][pos.z][pos.w];
+				if (!attackedPiece || !attackedPiece.type) {
+					return; // Skip if no piece to capture
+				}
 				material = materialScheme[piece.team].attackMaterial;
-				shadowPiece = Models.createMesh(attackedPiece.type, material, coordinates.x, coordinates.y, coordinates.z, 1, canRayCast)
-				if(attackedPiece.team === 0){
-					rotateObject(shadowPiece, 0, 180, 0)
+				pieceType = attackedPiece.type;
+				shadowPiece = Models.createMesh(pieceType, material, coordinates.x, coordinates.y, coordinates.z, 1, canRayCast);
+				
+				// Apply rotation if needed (white pieces face opposite direction)
+				if (attackedPiece.team === 0) {
+					rotateObject(shadowPiece, 0, 180, 0);
 				}
 			} else {
-				let material = materialScheme[piece.team].moveMaterial;
-				shadowPiece = Models.createMesh(piece.type, material, coordinates.x, coordinates.y, coordinates.z, 1, canRayCast)
-			}
+				// Show transparent version of the moving piece
+				material = materialScheme[piece.team].moveMaterial;
+				pieceType = piece.type;
+				shadowPiece = Models.createMesh(pieceType, material, coordinates.x, coordinates.y, coordinates.z, 1, canRayCast);
 				
-			this.possibleMovesContainer.add(shadowPiece)
-            
-            			
+				// Apply rotation if needed
+				if (piece.team === 0) {
+					rotateObject(shadowPiece, 0, 180, 0);
+				}
+			}
+			
+			if (shadowPiece) {
+				// Make preview pieces clickable for move execution
+				shadowPiece.canRayCast = canRayCast;
+				this.possibleMovesContainer.add(shadowPiece);
+			}
         });
         
     },
@@ -693,10 +731,16 @@ BoardGraphics.prototype = {
         
     },
     
-    hidePossibleMoves: function(objectName='possibleMoves'){
+    hidePossibleMoves: function(){
         while(this.possibleMovesContainer.children.length){
-			const mesh = this.possibleMovesContainer.children[0]
-			Selector.unhighlight(mesh)
+			const mesh = this.possibleMovesContainer.children[0];
+			// Dispose of geometry and material to prevent memory leaks
+			if (mesh.geometry) {
+				// Don't dispose if it's a shared geometry
+			}
+			if (mesh.material) {
+				mesh.material.dispose();
+			}
             this.possibleMovesContainer.remove(mesh);
         }
     },
@@ -752,6 +796,8 @@ BoardGraphics.prototype = {
 	setMesh: function(piece, x, y, z, w, addToContainer=true){
 		const mesh = this.createMesh(piece.type, piece.team, x, y, z, w, addToContainer);
         if (mesh) {
+            // Make piece selectable by default
+            mesh.selectable = true;
             piece.setMesh(mesh);
         } else {
             console.error(`❌ Failed to create mesh for ${piece.type} at (${x},${y},${z},${w})`);

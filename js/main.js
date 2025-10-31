@@ -42,7 +42,42 @@ const gameState = {
     highlightMoves: true,
     showCoords: false,
     animatePieces: true,
-    showAllBoards: false
+    showAllBoards: false,
+    selectedPiece: null,  // Currently selected piece mesh
+    selectedPieceData: null,  // Piece data (from gameBoard.pieces)
+    possibleMoves: null  // Array of possible moves for selected piece
+};
+
+// Selection system
+const selectionSystem = {
+    raycaster: new THREE.Raycaster(),
+    mouse: new THREE.Vector2(),
+    hoveredPiece: null,
+    selectedPiece: null,
+    
+    // Colors
+    HOVER_COLOR: 0x00B9FF,  // Blue for hover
+    SELECT_COLOR: 0x00B9FF,  // Blue for selection
+    
+    // Highlight a piece
+    highlight: function(mesh, color) {
+        if (!mesh || !mesh.material) return;
+        
+        // Store original color if not already stored
+        if (!mesh.material.originalColor) {
+            mesh.material.originalColor = mesh.material.color.getHex();
+        }
+        
+        // Set new color
+        mesh.material.color.setHex(color);
+    },
+    
+    // Unhighlight a piece
+    unhighlight: function(mesh) {
+        if (!mesh || !mesh.material || !mesh.material.originalColor) return;
+        
+        mesh.material.color.setHex(mesh.material.originalColor);
+    }
 };
 
 /* ============================================
@@ -68,10 +103,101 @@ function init() {
     // Initialize game (wait for models to load first)
     initializeGame();
     
+    // Setup mouse interaction for piece selection
+    setupPieceSelection();
+    
     // Start animation loop
     animate();
     
     console.log('✅ Initialization complete!');
+}
+
+/* ============================================
+   MOUSE INTERACTION SETUP
+   ============================================ */
+
+function setupPieceSelection() {
+    if (!canvas) return;
+    
+    // Update mouse position
+    canvas.addEventListener('mousemove', function(event) {
+        // Calculate mouse position in normalized device coordinates (-1 to +1)
+        const rect = canvas.getBoundingClientRect();
+        selectionSystem.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        selectionSystem.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    });
+    
+    // Handle clicks
+    canvas.addEventListener('click', function(event) {
+        // Check if clicking on a possible move location
+        if (selectionSystem.selectedPiece && gameState.possibleMoves) {
+            const pieces = gameBoard.graphics.possibleMovesContainer.children.filter(p => p.canRayCast);
+            if (pieces.length > 0) {
+                selectionSystem.raycaster.setFromCamera(selectionSystem.mouse, camera);
+                const intersects = selectionSystem.raycaster.intersectObjects(pieces);
+                
+                if (intersects.length > 0) {
+                    // Clicked on a possible move - execute move
+                    const targetMesh = intersects[0].object;
+                    const targetWorldPos = targetMesh.position;
+                    const targetCoords = gameBoard.graphics.worldCoordinates(targetWorldPos);
+                    
+                    // Find this move in possibleMoves
+                    const move = gameState.possibleMoves.find(m => 
+                        m.x === targetCoords.x && 
+                        m.y === targetCoords.y && 
+                        m.z === targetCoords.z && 
+                        m.w === targetCoords.w
+                    );
+                    
+                    if (move) {
+                        // Get source coordinates
+                        const sourceCoords = gameBoard.graphics.worldCoordinates(selectionSystem.selectedPiece.position);
+                        
+                        // Execute move
+                        executeMove(
+                            sourceCoords.x, sourceCoords.y, sourceCoords.z, sourceCoords.w,
+                            targetCoords.x, targetCoords.y, targetCoords.z, targetCoords.w
+                        );
+                        return;
+                    }
+                }
+            }
+        }
+        
+        // Regular piece selection
+        if (!gameBoard || !gameBoard.graphics) return;
+        
+        const pieces = gameBoard.graphics.piecesContainer.children.filter(p => p.canRayCast);
+        if (pieces.length === 0) return;
+        
+        selectionSystem.raycaster.setFromCamera(selectionSystem.mouse, camera);
+        const intersects = selectionSystem.raycaster.intersectObjects(pieces);
+        
+        if (intersects.length > 0) {
+            const clickedPiece = intersects[0].object;
+            
+            // If clicking the same piece, deselect it
+            if (selectionSystem.selectedPiece === clickedPiece) {
+                deselectPiece();
+            } else {
+                selectPiece(clickedPiece);
+            }
+        } else {
+            // Clicked on empty space, deselect
+            deselectPiece();
+        }
+    });
+    
+    console.log('✅ Piece selection system initialized');
+}
+
+function executeMove(x0, y0, z0, w0, x1, y1, z1, w1) {
+    console.log(`🎯 Executing move: (${x0},${y0},${z0},${w0}) → (${x1},${y1},${z1},${w1})`);
+    
+    // TODO: Validate move and update game state
+    // For now, just log and deselect
+    deselectPiece();
 }
 
 /* ============================================
@@ -721,6 +847,9 @@ function animate() {
     // Update controls
     controls.update();
     
+    // Update raycasting for piece selection (hover)
+    updatePieceHover();
+    
     // Update 2D gizmo visualization
     update2DGizmo();
     
@@ -728,6 +857,115 @@ function animate() {
     
     // Render scene
     renderer.render(scene, camera);
+}
+
+/* ============================================
+   PIECE SELECTION SYSTEM
+   ============================================ */
+
+function updatePieceHover() {
+    if (!gameBoard || !gameBoard.graphics) return;
+    
+    // Only update hover if no piece is selected
+    if (selectionSystem.selectedPiece) return;
+    
+    // Get all selectable pieces
+    const pieces = gameBoard.graphics.piecesContainer.children.filter(p => p.canRayCast);
+    
+    if (pieces.length === 0) return;
+    
+    // Update raycasting
+    selectionSystem.raycaster.setFromCamera(selectionSystem.mouse, camera);
+    const intersects = selectionSystem.raycaster.intersectObjects(pieces);
+    
+    // Get closest intersection
+    const closest = intersects.length > 0 ? intersects[0].object : null;
+    
+    // Update hover highlight
+    if (closest !== selectionSystem.hoveredPiece) {
+        // Unhighlight previous hover
+        if (selectionSystem.hoveredPiece) {
+            selectionSystem.unhighlight(selectionSystem.hoveredPiece);
+        }
+        
+        // Highlight new hover
+        selectionSystem.hoveredPiece = closest;
+        if (selectionSystem.hoveredPiece && selectionSystem.hoveredPiece.selectable !== false) {
+            selectionSystem.highlight(selectionSystem.hoveredPiece, selectionSystem.HOVER_COLOR);
+        }
+    }
+}
+
+function selectPiece(mesh) {
+    if (!mesh || !gameBoard) return;
+    
+    // Deselect previous piece
+    if (selectionSystem.selectedPiece && selectionSystem.selectedPiece !== mesh) {
+        selectionSystem.unhighlight(selectionSystem.selectedPiece);
+        gameBoard.graphics.hidePossibleMoves();
+    }
+    
+    // Get piece data from board coordinates
+    const worldPos = mesh.position;
+    const boardCoords = gameBoard.graphics.worldCoordinates(worldPos);
+    const piece = gameBoard.pieces[boardCoords.x][boardCoords.y][boardCoords.z][boardCoords.w];
+    
+    if (!piece || !piece.type) {
+        // Empty square clicked, deselect
+        if (selectionSystem.selectedPiece) {
+            selectionSystem.unhighlight(selectionSystem.selectedPiece);
+            selectionSystem.selectedPiece = null;
+            gameState.selectedPiece = null;
+            gameState.selectedPieceData = null;
+            gameState.possibleMoves = null;
+            gameBoard.graphics.hidePossibleMoves();
+        }
+        return;
+    }
+    
+    // Check if piece is selectable
+    if (mesh.selectable === false) {
+        return; // Cannot select this piece
+    }
+    
+    // Select the piece
+    selectionSystem.selectedPiece = mesh;
+    selectionSystem.highlight(mesh, selectionSystem.SELECT_COLOR);
+    
+    // Update game state
+    gameState.selectedPiece = mesh;
+    gameState.selectedPieceData = piece;
+    
+    // Get possible moves
+    const possibleMoves = piece.getPossibleMoves(
+        gameBoard.pieces,
+        boardCoords.x,
+        boardCoords.y,
+        boardCoords.z,
+        boardCoords.w
+    );
+    
+    gameState.possibleMoves = possibleMoves;
+    
+    // Show possible moves (with canRayCast=true so they can be clicked)
+    if (possibleMoves && possibleMoves.length > 0) {
+        gameBoard.graphics.showPossibleMoves(possibleMoves, piece, {}, true);
+    } else {
+        gameBoard.graphics.hidePossibleMoves();
+    }
+    
+    console.log(`✅ Selected ${piece.type} at (${boardCoords.x},${boardCoords.y},${boardCoords.z},${boardCoords.w}), ${possibleMoves.length} possible moves`);
+}
+
+function deselectPiece() {
+    if (selectionSystem.selectedPiece) {
+        selectionSystem.unhighlight(selectionSystem.selectedPiece);
+        selectionSystem.selectedPiece = null;
+        gameState.selectedPiece = null;
+        gameState.selectedPieceData = null;
+        gameState.possibleMoves = null;
+        gameBoard.graphics.hidePossibleMoves();
+    }
 }
 
 /* ============================================
