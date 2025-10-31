@@ -78,6 +78,89 @@ body {
     gap: var(--spacing-md);
 }
 
+.header-buttons {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
+.btn-tutorial,
+.btn-feedback {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-tutorial {
+    background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+    color: var(--text-primary);
+    box-shadow: 0 4px 15px rgba(0, 212, 255, 0.4);
+    animation: shine 3s infinite;
+}
+
+.btn-tutorial::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+        45deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+    );
+    transform: rotate(45deg);
+    animation: shine-sweep 3s infinite;
+}
+
+@keyframes shine {
+    0%, 100% {
+        box-shadow: 0 4px 15px rgba(0, 212, 255, 0.4);
+    }
+    50% {
+        box-shadow: 0 4px 25px rgba(0, 212, 255, 0.8), 0 0 30px rgba(0, 212, 255, 0.5);
+    }
+}
+
+@keyframes shine-sweep {
+    0% {
+        transform: translateX(-100%) translateY(-100%) rotate(45deg);
+    }
+    50% {
+        transform: translateX(100%) translateY(100%) rotate(45deg);
+    }
+    100% {
+        transform: translateX(-100%) translateY(-100%) rotate(45deg);
+    }
+}
+
+.btn-tutorial:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(0, 212, 255, 0.6);
+}
+
+.btn-feedback {
+    background: #ff8800;
+    color: var(--text-primary);
+    box-shadow: 0 4px 15px rgba(255, 136, 0, 0.3);
+}
+
+.btn-feedback:hover {
+    background: #ff9900;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 136, 0, 0.5);
+}
+
 .game-mode-selector {
     display: flex;
     gap: var(--spacing-sm);
@@ -1010,6 +1093,205 @@ body {
 /* ============================================
    UTILITIES
    ============================================ */
+
+/* ============================================
+   TUTORIAL MODAL
+   ============================================ */
+
+.tutorial-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(10, 14, 39, 0.98);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.3s ease;
+}
+
+.tutorial-modal-content {
+    position: relative;
+    width: 90%;
+    max-width: 900px;
+    max-height: 85vh;
+    background: var(--bg-card);
+    border: 2px solid var(--accent-primary);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-lg);
+    box-shadow: 0 10px 40px rgba(0, 212, 255, 0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.tutorial-close {
+    position: absolute;
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+    width: 40px;
+    height: 40px;
+    background: var(--bg-tertiary);
+    border: 2px solid var(--accent-primary);
+    border-radius: 50%;
+    color: var(--text-primary);
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tutorial-close:hover {
+    background: var(--accent-danger);
+    border-color: var(--accent-danger);
+    transform: rotate(90deg) scale(1.1);
+}
+
+.tutorial-nav-container {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+}
+
+.tutorial-nav-arrow {
+    width: 50px;
+    height: 50px;
+    background: var(--bg-tertiary);
+    border: 2px solid var(--accent-primary);
+    border-radius: 50%;
+    color: var(--text-primary);
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.tutorial-nav-arrow:hover {
+    background: var(--accent-primary);
+    color: var(--bg-primary);
+    transform: scale(1.1);
+}
+
+.tutorial-nav-arrow:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.tutorial-nav-arrow:disabled:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    transform: none;
+}
+
+.tutorial-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--spacing-md);
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    min-height: 400px;
+    max-height: calc(85vh - 200px);
+}
+
+.tutorial-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.tutorial-content::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+    border-radius: 4px;
+}
+
+.tutorial-content::-webkit-scrollbar-thumb {
+    background: var(--accent-primary);
+    border-radius: 4px;
+}
+
+.tutorial-content::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-secondary);
+}
+
+.tutorial-page {
+    display: none;
+}
+
+.tutorial-page.active {
+    display: block;
+    animation: fadeIn 0.5s ease;
+}
+
+.tutorial-page h2 {
+    color: var(--accent-primary);
+    font-size: 28px;
+    margin-bottom: var(--spacing-md);
+    border-bottom: 2px solid var(--accent-primary);
+    padding-bottom: var(--spacing-sm);
+}
+
+.tutorial-page h3 {
+    color: var(--accent-secondary);
+    font-size: 20px;
+    margin-top: var(--spacing-lg);
+    margin-bottom: var(--spacing-sm);
+}
+
+.tutorial-page p {
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin-bottom: var(--spacing-md);
+    font-size: 15px;
+}
+
+.tutorial-page ul,
+.tutorial-page ol {
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin-left: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+}
+
+.tutorial-page li {
+    margin-bottom: var(--spacing-sm);
+}
+
+.tutorial-page code {
+    background: var(--bg-tertiary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    color: var(--accent-primary);
+    font-size: 14px;
+}
+
+.tutorial-page strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.tutorial-modal-page-indicator {
+    text-align: center;
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-sm);
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-family: 'Courier New', monospace;
+}
+
+.tutorial-modal-page-indicator span {
+    color: var(--accent-primary);
+    font-weight: bold;
+}
 
 .hidden {
     display: none !important;
