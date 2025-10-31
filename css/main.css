@@ -870,7 +870,7 @@ body {
     background: var(--bg-card);
     border: 2px solid var(--accent-primary);
     border-radius: var(--border-radius);
-    padding: var(--spacing-lg) * 2;
+    padding: calc(var(--spacing-lg) * 2);
     text-align: center;
     max-width: 400px;
     box-shadow: 0 10px 40px rgba(0, 212, 255, 0.3);

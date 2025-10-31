@@ -61,6 +61,11 @@ const LocalMode = {
             if (typeof updatePieceCounts === 'function') {
                 updatePieceCounts();
             }
+            
+            // Check for win condition (in case we undo back to a checkmate state)
+            if (typeof checkWinCondition === 'function') {
+                checkWinCondition();
+            }
         }
     },
     redo: function() {
@@ -75,6 +80,11 @@ const LocalMode = {
             // Update piece counts
             if (typeof updatePieceCounts === 'function') {
                 updatePieceCounts();
+            }
+            
+            // Check for win condition (in case we redo into a checkmate state)
+            if (typeof checkWinCondition === 'function') {
+                checkWinCondition();
             }
         }
     },
@@ -363,6 +373,9 @@ function executeMove(x0, y0, z0, w0, x1, y1, z1, w1) {
             
             // Note: moveManager.move() already calls updateUI() at the end,
             // which updates the turn-text, turn-icon, turn-number, current-player, etc.
+            
+            // Check for win condition after move
+            checkWinCondition();
         } catch (error) {
             console.error('❌ Error executing move via moveManager:', error);
             success = false;
@@ -826,6 +839,15 @@ function setupKeyboardShortcuts() {
 
 function resetGame() {
     console.log('🔄 Resetting game...');
+    
+    // Hide game over modal if it's open
+    const gameOverModal = document.getElementById('game-over-modal');
+    if (gameOverModal) {
+        gameOverModal.style.display = 'none';
+    }
+    
+    // Deselect any selected piece
+    deselectPiece();
     
     // Stop timer
     stopGameTimer();
@@ -1442,6 +1464,37 @@ function hidePieceInfoDisplay() {
     const container = document.getElementById('piece-info-container');
     if (container) {
         container.style.display = 'none';
+    }
+}
+
+function checkWinCondition() {
+    if (!gameBoard || !moveManager) return;
+    
+    const winStatus = gameBoard.winCondition();
+    const modal = document.getElementById('game-over-modal');
+    const modalTitle = document.getElementById('game-over-title');
+    const modalMessage = document.getElementById('game-over-message');
+    
+    if (!modal || !modalTitle || !modalMessage) return;
+    
+    if (winStatus === 0) {
+        // White wins
+        modalTitle.textContent = 'Checkmate!';
+        modalMessage.textContent = 'White wins the game!';
+        modal.style.display = 'flex';
+    } else if (winStatus === 1) {
+        // Black wins
+        modalTitle.textContent = 'Checkmate!';
+        modalMessage.textContent = 'Black wins the game!';
+        modal.style.display = 'flex';
+    } else if (winStatus === 2) {
+        // Stalemate
+        modalTitle.textContent = 'Stalemate!';
+        modalMessage.textContent = 'The game ends in a draw.';
+        modal.style.display = 'flex';
+    } else {
+        // Game continues
+        modal.style.display = 'none';
     }
 }
 
