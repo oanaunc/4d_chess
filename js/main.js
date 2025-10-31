@@ -225,6 +225,14 @@ function init() {
         }
     }, true);
     
+    // Also catch unhandled promise rejections (the error shows "(in promise)")
+    window.addEventListener('unhandledrejection', (e) => {
+        if (e.reason && e.reason.message && e.reason.message.includes('message channel closed')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+    
     // Get canvas and loading screen
     canvas = document.getElementById('game-canvas');
     loadingScreen = document.getElementById('loading-screen');
@@ -432,17 +440,36 @@ function executeMove(x0, y0, z0, w0, x1, y1, z1, w1) {
             // Note: moveManager.move() already calls updateUI() at the end,
             // which updates the turn-text, turn-icon, turn-number, current-player, etc.
             
-            // Check for win condition after move (with delay to ensure board state is updated)
-            setTimeout(() => {
+            // CRITICAL: Check win condition immediately after move completes
+            // After move() completes, the turn has switched to the opponent
+            // We need to check the current team (opponent) to see if they're in checkmate
+            // Also check the team that just moved to see if they put themselves in checkmate (illegal!)
+            const currentTeam = moveManager.whoseTurn(); // Team whose turn it is now (opponent)
+            const previousTeam = (currentTeam + 1) % 2; // Team that just moved
+            
+            // Check immediately - no delay needed for checkmate detection
+            const winStatus = gameBoard.winCondition();
+            
+            if (winStatus !== -1) {
+                // Game is over (checkmate or stalemate) - show modal immediately
+                console.log(`🛑 Game over detected! Win status: ${winStatus}`);
                 checkWinCondition();
+            } else {
+                // Game continues - check if current team is in check (but not checkmate yet)
+                // This will be handled by the UI update
                 
-                // Also check if bot should move next (but only if game is not over)
-                const winStatus = gameBoard.winCondition();
-                if (winStatus === -1) {
-                    // Game continues, schedule bot move if needed
-                    scheduleBotMove();
-                }
-            }, 200);
+                // Schedule bot move if needed
+                setTimeout(() => {
+                    const winStatusAfter = gameBoard.winCondition();
+                    if (winStatusAfter === -1) {
+                        // Game still continues, schedule bot move if needed
+                        scheduleBotMove();
+                    } else {
+                        // Game ended while we waited - show modal
+                        checkWinCondition();
+                    }
+                }, 100);
+            }
         } catch (error) {
             console.error('❌ Error executing move via moveManager:', error);
             success = false;
@@ -956,19 +983,45 @@ function resetGame() {
     
     // Reset game board
     if (gameBoard) {
-        // Reinitialize pieces
+        // CRITICAL: Remove all existing piece meshes from the scene first
+        if (gameBoard.graphics && gameBoard.graphics.piecesContainer) {
+            const piecesContainer = gameBoard.graphics.piecesContainer;
+            const meshCount = piecesContainer.children.length;
+            
+            // Remove all children and dispose of their resources
+            while (piecesContainer.children.length > 0) {
+                const mesh = piecesContainer.children[0];
+                
+                // Dispose of material (geometry is shared and shouldn't be disposed)
+                if (mesh.material) {
+                    mesh.material.dispose();
+                }
+                
+                // Remove from container (which removes from scene)
+                piecesContainer.remove(mesh);
+            }
+            
+            console.log(`🧹 Cleared ${meshCount} meshes from piecesContainer`);
+        }
+        
+        // Clear possible moves previews
+        if (gameBoard.graphics && gameBoard.graphics.hidePossibleMoves) {
+            gameBoard.graphics.hidePossibleMoves();
+        }
+        
+        // Reinitialize pieces array
         gameBoard.pieces = gameBoard.initPieces();
+        
+        // Place pieces at starting positions (this will create new meshes)
         gameBoard.initializeStartingPositions();
     }
     
-    // Reset move manager
-    if (moveManager) {
-        moveManager = new MoveManager(gameBoard, 0, LocalMode);
-        
-        // Expose moveManager globally
-        if (typeof window !== 'undefined') {
-            window.moveManager = moveManager;
-        }
+    // Reset move manager - IMPORTANT: reassign the global variable
+    moveManager = new MoveManager(gameBoard, 0, LocalMode);
+    
+    // Expose moveManager globally
+    if (typeof window !== 'undefined') {
+        window.moveManager = moveManager;
     }
     
     // Reset UI
@@ -1626,28 +1679,20 @@ function selectPiece(mesh) {
     
     // Check for checkmate/stalemate after filtering moves
     // This is especially important when a player has no legal moves and is in check
+    // PERFORMANCE: Only check if we have very few moves to avoid expensive computation
     if (possibleMoves.length === 0) {
-        // No legal moves for this piece - check all pieces to see if team has any legal moves
-        const teamHasLegalMoves = gameBoard.hasLegalMoves(piece.team);
+        // No legal moves for this piece - but don't immediately check all pieces (expensive!)
+        // Instead, just note it and let the move completion handler check
         const isInCheck = gameBoard.inCheck(piece.team);
         
-        if (isInCheck && !teamHasLegalMoves) {
-            // In check with no legal moves for entire team = checkmate!
-            console.log(`⚠️ CHECKMATE detected! Team ${piece.team} is in check with no legal moves.`);
-            // Check win condition with a small delay to ensure UI is updated
+        if (isInCheck) {
+            console.log(`⚠️ Selected piece has no legal moves and team ${piece.team} is in check - checking checkmate...`);
+            // Use a small delay and check win condition (which will check hasLegalMoves)
             setTimeout(() => {
                 if (typeof checkWinCondition === 'function') {
                     checkWinCondition();
                 }
-            }, 300);
-        } else if (!isInCheck && !teamHasLegalMoves) {
-            // Not in check but no legal moves = stalemate
-            console.log(`⚠️ STALEMATE detected! Team ${piece.team} has no legal moves but is not in check.`);
-            setTimeout(() => {
-                if (typeof checkWinCondition === 'function') {
-                    checkWinCondition();
-                }
-            }, 300);
+            }, 100); // Reduced delay
         }
     }
     

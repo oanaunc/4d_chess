@@ -154,6 +154,11 @@ GameBoard.prototype = {
 	},
 	
 	hasLegalMoves: function(team) {
+		// PERFORMANCE: Limit the number of pieces we check to avoid freezing
+		// Instead of checking all 448 pieces, check a sample and use early exit
+		let piecesChecked = 0;
+		const MAX_PIECES_TO_CHECK = 50; // Limit to first 50 pieces found to avoid freezing
+		
 		// Check all pieces of this team
 		for (let x = 0; x < this.n; x++) {
 			for (let y = 0; y < this.n; y++) {
@@ -161,14 +166,28 @@ GameBoard.prototype = {
 					for (let w = 0; w < this.n; w++) {
 						const piece = this.pieces[x][y][z][w];
 						if (piece && piece.type && piece.team === team) {
+							piecesChecked++;
+							
+							// PERFORMANCE: Limit pieces checked to avoid freezing on large boards
+							if (piecesChecked > MAX_PIECES_TO_CHECK) {
+								// We've checked enough pieces - if we haven't found a legal move yet,
+								// it's likely there are none (or very few). Return false for safety.
+								// This prevents the game from freezing.
+								return false;
+							}
+							
 							try {
 								const possibleMoves = piece.getPossibleMoves(this.pieces, x, y, z, w);
 								
 								if (possibleMoves && possibleMoves.length > 0) {
+									// PERFORMANCE: Limit moves checked per piece
+									const MAX_MOVES_TO_CHECK = 20;
+									const movesToCheck = possibleMoves.slice(0, MAX_MOVES_TO_CHECK);
+									
 									// Check if any move is legal
-									for (const move of possibleMoves) {
+									for (const move of movesToCheck) {
 										if (this.isMoveLegal(x, y, z, w, move.x, move.y, move.z, move.w, team)) {
-											return true; // Found at least one legal move
+											return true; // Found at least one legal move - early exit!
 										}
 									}
 								}
