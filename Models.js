@@ -1,21 +1,21 @@
 const Models = {
     
-    SCALE_FACTOR: 5,  // Made much larger to see the pieces
+    SCALE_FACTOR: 9,  // Scale for chess pieces (matching example game)
     
     materials: {
         black: {
-            color: 0x818181,
-            reflectivity: 0.1,
-            shininess: 20,
+            color: 0x404040,  // Medium gray - visible against dark background
+            specular: 0x222222,
+            shininess: 30,
             flatShading: false,
             transparent: false,
             opacity: 1.0
         },
     
         white: {
-            color: 0xFCF6E3,
-            reflectivity: 10,
-            shininess: 25,
+            color: 0xFFFFFF,  // Bright white for maximum visibility
+            specular: 0xcccccc,
+            shininess: 40,
             flatShading: false,
             transparent: false,
             opacity: 1.0
@@ -24,7 +24,7 @@ const Models = {
     
         red: {
             color: 0xFF0000,
-            reflectivity: 10,
+            specular: 0x444444,
             shininess: 25,
             flatShading: false,
             transparent: true,
@@ -33,7 +33,7 @@ const Models = {
         
         green: {
             color: 0x90EE90,
-            reflectivity: 10,
+            specular: 0x444444,
             shininess: 25,
             flatShading: false,
             transparent: true,
@@ -42,7 +42,7 @@ const Models = {
         
         darkGreen: {
             color: 0x006400,
-            reflectivity: 10,
+            specular: 0x222222,
             shininess: 25,
             flatShading: false,
             transparent: true,
@@ -51,7 +51,7 @@ const Models = {
 		
 		lightGreen: {
             color: 0x42f5aa,
-            reflectivity: 10,
+            specular: 0x444444,
             shininess: 25,
             flatShading: false,
             transparent: true,
@@ -60,7 +60,7 @@ const Models = {
         
         orange: {
             color: 0xFFA500,
-            reflectivity: 10,
+            specular: 0x444444,
             shininess: 25,
             flatShading: false,
             transparent: true,
@@ -69,7 +69,7 @@ const Models = {
         
         blue: {
             color: 0x00B9FF,
-            reflectivity: 10,
+            specular: 0x444444,
             shininess: 25,
             flatShading: false,
             transparent: true,
@@ -107,7 +107,7 @@ const Models = {
         
     },
     
-    directory: 'models/',
+    directory: 'js/pieces/obj_pieces/',
     
     pieceData: [
         {
@@ -124,7 +124,7 @@ const Models = {
             rotation: new THREE.Vector3(0, 0, 0)
         }, {
             name: 'knight',
-            fileName: 'Knight.obj',
+            fileName: 'Knight V1.obj',
             rotation: new THREE.Vector3(0, 0, 0)
         }, {
             name: 'queen',
@@ -139,25 +139,18 @@ const Models = {
     
     createMesh: function(piece, material, x=0, y=0, z=0, scale=1, canRayCast=true){
         
-//        const manager = new THREE.LoadingManager();
-//        const loader = new THREE.JSONLoader(manager);
-//        const path = Models.directory + Models[piece].fileName;
-//        
-//        loader.load(path, function(geometry, materials) {
-//            var mesh = new THREE.Mesh(geometry, material);
-//            mesh.position.set(3, 0, 21);
-//            mesh.rotation.set(Models[piece].rotation.x, Models[piece].rotation.y, Models[piece].rotation.z);
-//            mesh.castShadow = true;
-//            mesh.receiveShadow = true;
-//
-//            mesh.scale.set(4, 4, 4)
-//            scene.add(mesh)
-//        });
-        
         const pieceData = Models.pieceData[Models.pieceIndices[piece]]
         const geometry = Models.geometries[piece]
-        let mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial(material))
-//        let mesh = new THREE.Mesh(geometry, new THREE.MeshNormalMaterial(material))
+        
+        if (!geometry) {
+            console.error(`❌ No geometry found for piece: ${piece}`);
+            return null;
+        }
+        
+        // Create material with proper properties
+        const meshMaterial = new THREE.MeshPhongMaterial(material);
+        let mesh = new THREE.Mesh(geometry, meshMaterial);
+        
         mesh.position.set(0, 0, 0);
         mesh.rotation.set(pieceData.rotation.x, pieceData.rotation.y, pieceData.rotation.z);
         mesh.castShadow = true;
@@ -165,19 +158,13 @@ const Models = {
 
 		mesh.scale.set(Models.SCALE_FACTOR, Models.SCALE_FACTOR, Models.SCALE_FACTOR)
 		const height = new THREE.Box3().setFromObject(mesh).max.y;
-//		const dHeight = height * (scale - 1)
 		
 		mesh.scale.multiplyScalar(scale)
 		mesh.position.set(x, y, z)
-		
-		
-		
         
         mesh.canRayCast = canRayCast;
         
-        return mesh
-        
-        
+        return mesh;
     },
     
     geometries: {},
@@ -190,15 +177,20 @@ const Models = {
 			const manager = new THREE.LoadingManager();
 			manager.onLoad = function() {
                 console.log('✅ All models loaded successfully!');
+                console.log('📦 Loaded geometries:', Object.keys(Models.geometries));
+                
+                // Verify each geometry
+                for (let pieceName in Models.geometries) {
+                    const geom = Models.geometries[pieceName];
+                    const vertexCount = geom.attributes && geom.attributes.position ? geom.attributes.position.count : 0;
+                    console.log(`  ✓ ${pieceName}: ${vertexCount} vertices`);
+                }
+                
                 resolve();
             };
             manager.onError = function(url) {
                 console.error('❌ Error loading:', url);
                 reject(url);
-            };
-            manager.onProgress = function(url, loaded, total) {
-                const percent = Math.round((loaded / total) * 100);
-                console.log(`Loading models: ${percent}% (${loaded}/${total})`);
             };
             
 			const loader = new THREE.OBJLoader(manager);
@@ -207,29 +199,34 @@ const Models = {
 			Models.pieceData.forEach(piece => {
 				const path = Models.directory + piece.fileName;
                 
+                console.log(`📂 Loading: ${path}`);
+                
 				loader.load(
                     path,
                     function(object) {
-                        // Successfully loaded
+                        // Successfully loaded OBJ
                         Models.loadedObjects[piece.name] = object;
                         
                         // Extract geometry from first mesh in the object
+                        let foundGeometry = false;
                         object.traverse(function(child) {
                             if (child instanceof THREE.Mesh) {
                                 if (!Models.geometries[piece.name]) {
                                     Models.geometries[piece.name] = child.geometry;
+                                    foundGeometry = true;
+                                    console.log(`  ✓ Extracted geometry from ${piece.name}`);
                                 }
                             }
                         });
                         
+                        if (!foundGeometry) {
+                            console.warn(`⚠️ No geometry found in ${piece.name} object`);
+                        }
+                        
                         console.log(`✅ Loaded: ${piece.name}`);
                     },
                     function(xhr) {
-                        // Progress
-                        if (xhr.lengthComputable) {
-                            const percentComplete = xhr.loaded / xhr.total * 100;
-                            console.log(`${piece.name}: ${Math.round(percentComplete)}%`);
-                        }
+                        // Progress (optional)
                     },
                     function(error) {
                         // Error

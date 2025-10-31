@@ -37,7 +37,7 @@ const LocalMode = {
 const gameState = {
     currentW: 2,
     currentY: 0,
-    boardOpacity: 0.4,
+    boardOpacity: 0.8,
     showGrid: true,
     highlightMoves: true,
     showCoords: false,
@@ -86,9 +86,10 @@ function setupThreeJS() {
     
     // Create camera
     const aspect = window.innerWidth / window.innerHeight;
-    camera = new THREE.PerspectiveCamera(60, aspect, 1, 5000);
-    camera.position.set(800, 600, 800);
-    camera.lookAt(0, 0, 0);
+    camera = new THREE.PerspectiveCamera(60, aspect, 1, 10000);
+    
+    // Initial camera position (will be adjusted after board is created)
+    camera.position.set(0, 1500, 0);
     
     // Create renderer
     renderer = new THREE.WebGLRenderer({
@@ -101,22 +102,43 @@ function setupThreeJS() {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     
-    // Add orbit controls
+    // Add orbit controls (CAD-style)
     controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 0, 0);  // Will be updated after board is created
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.screenSpacePanning = false;
+    controls.screenSpacePanning = true;  // Enable vertical panning (like CAD)
     controls.minDistance = 200;
-    controls.maxDistance = 2000;
-    controls.maxPolarAngle = Math.PI / 2;
+    controls.maxDistance = 5000;
+    controls.maxPolarAngle = Math.PI; // Allow full rotation
+    
+    // Mouse button configuration (CAD-style)
+    controls.mouseButtons = {
+        LEFT: THREE.MOUSE.ROTATE,    // Left mouse: rotate
+        MIDDLE: THREE.MOUSE.DOLLY,   // Middle mouse (wheel): zoom
+        RIGHT: THREE.MOUSE.PAN       // Right mouse: pan (move horizontally & vertically)
+    };
+    
+    // Adjust speeds for better control
+    controls.panSpeed = 1.0;         // Pan speed
+    controls.rotateSpeed = 1.0;      // Rotation speed
+    controls.zoomSpeed = 1.2;        // Zoom speed
+    
+    // Enable zoom to cursor behavior (zoom towards mouse pointer)
+    if (controls.hasOwnProperty('zoomToCursor')) {
+        controls.zoomToCursor = true;
+    }
     
     // Add lights
     setupLights();
     
-    // Add grid helper
-    const gridHelper = new THREE.GridHelper(2000, 40, 0x444464, 0x1e2746);
-    gridHelper.position.y = -10;
+    // Add grid helper (position will be adjusted after board is created)
+    const gridHelper = new THREE.GridHelper(4000, 80, 0x444464, 0x1e2746);
+    gridHelper.position.set(0, 0, 0);
     scene.add(gridHelper);
+    
+    // Store grid helper reference for later positioning
+    window.gridHelper = gridHelper;
     
     // Handle window resize
     window.addEventListener('resize', onWindowResize, false);
@@ -184,6 +206,19 @@ function initializeGame() {
                     // Create move manager
                     moveManager = new MoveManager(gameBoard, 0, LocalMode);
                     
+                    // Position camera based on actual board center (like the example game does!)
+                    const boardCenter = gameBoard.graphics.getCenter();
+                    console.log('📐 Board center calculated:', boardCenter);
+                    
+                    camera.position.set(800, 600, boardCenter.z + 800);
+                    controls.target.set(boardCenter.x, boardCenter.y, boardCenter.z);
+                    controls.update();
+                    
+                    // Position grid helper under board center
+                    if (window.gridHelper) {
+                        window.gridHelper.position.set(boardCenter.x, 0, boardCenter.z);
+                    }
+                    
                     setTimeout(() => {
                         updateLoadingText('Ready!');
                         
@@ -193,6 +228,16 @@ function initializeGame() {
                             console.log('✅ 4D Chess is ready to play!');
                             console.log('📊 Total pieces: 256 (128 white + 128 black)');
                             console.log('📐 Board size: 8×8×8×8 = 4,096 positions');
+                            
+                            // Debug scene structure
+                            console.log('🔍 Scene children:', scene.children.map(c => c.name || c.type));
+                            if (gameBoard && gameBoard.graphics) {
+                                console.log('🔍 Board graphics mesh children:', {
+                                    boardContainer: gameBoard.graphics.boardContainer ? gameBoard.graphics.boardContainer.children.length : 'none',
+                                    piecesContainer: gameBoard.graphics.piecesContainer ? gameBoard.graphics.piecesContainer.children.length : 'none',
+                                    meshInScene: scene.children.includes(gameBoard.graphics.mesh)
+                                });
+                            }
                             
                             // Update UI
                             updateStatus('Game ready', 1, 'White', 'No check');
@@ -458,7 +503,19 @@ function updateBoardVisibility() {
 
 function updateBoardOpacity() {
     console.log(`Board opacity: ${gameState.boardOpacity}`);
-    // TODO: Update board material opacity
+    
+    if (!gameBoard || !gameBoard.graphics || !gameBoard.graphics.boardContainer) {
+        return;
+    }
+    
+    // Update all board squares
+    gameBoard.graphics.boardContainer.traverse((object) => {
+        if (object instanceof THREE.Mesh && object.material) {
+            object.material.opacity = gameState.boardOpacity;
+            object.material.transparent = gameState.boardOpacity < 1.0;
+            object.material.needsUpdate = true;
+        }
+    });
 }
 
 function toggleGrid(show) {
@@ -475,24 +532,30 @@ function toggleCoordinates(show) {
 }
 
 function resetCamera() {
-    camera.position.set(800, 600, 800);
-    camera.lookAt(0, 0, 0);
-    controls.target.set(0, 0, 0);
-    controls.update();
+    if (gameBoard && gameBoard.graphics) {
+        const center = gameBoard.graphics.getCenter();
+        camera.position.set(800, 600, center.z + 800);
+        controls.target.set(center.x, center.y, center.z);
+        controls.update();
+    }
 }
 
 function setTopView() {
-    camera.position.set(0, 1200, 0);
-    camera.lookAt(0, 0, 0);
-    controls.target.set(0, 0, 0);
-    controls.update();
+    if (gameBoard && gameBoard.graphics) {
+        const center = gameBoard.graphics.getCenter();
+        camera.position.set(center.x, 3000, center.z);
+        controls.target.set(center.x, center.y, center.z);
+        controls.update();
+    }
 }
 
 function setSideView() {
-    camera.position.set(1200, 400, 0);
-    camera.lookAt(0, 0, 0);
-    controls.target.set(0, 0, 0);
-    controls.update();
+    if (gameBoard && gameBoard.graphics) {
+        const center = gameBoard.graphics.getCenter();
+        camera.position.set(center.x + 2000, center.y + 500, center.z);
+        controls.target.set(center.x, center.y, center.z);
+        controls.update();
+    }
 }
 
 function updateStatus(message, turn, player, checkStatus) {

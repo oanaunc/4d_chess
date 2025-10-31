@@ -254,6 +254,48 @@ GameBoard.prototype = {
         }
         
         console.log('✅ Placed 256 pieces: 128 White + 128 Black');
+        console.log(`📦 Pieces container has ${this.graphics.piecesContainer.children.length} meshes`);
+        
+        // Verify some pieces
+        let whitePieces = 0, blackPieces = 0;
+        this.applyToAll(piece => {
+            if (piece.type && piece.mesh) {
+                if (piece.team === 0) whitePieces++;
+                else if (piece.team === 1) blackPieces++;
+            }
+        });
+        console.log(`🔍 Verification: ${whitePieces} white pieces, ${blackPieces} black pieces with meshes`);
+        
+        // Debug first piece details
+        if (this.graphics.piecesContainer.children.length > 0) {
+            const firstMesh = this.graphics.piecesContainer.children[0];
+            console.log('🔬 First mesh details:', {
+                position: {x: firstMesh.position.x, y: firstMesh.position.y, z: firstMesh.position.z},
+                scale: {x: firstMesh.scale.x, y: firstMesh.scale.y, z: firstMesh.scale.z},
+                visible: firstMesh.visible,
+                material: {
+                    color: '#' + firstMesh.material.color.getHexString(),
+                    opacity: firstMesh.material.opacity,
+                    transparent: firstMesh.material.transparent
+                },
+                geometry: {
+                    vertices: firstMesh.geometry.attributes.position.count
+                }
+            });
+            
+            console.log('🎯 Camera looking at pieces from:', {
+                cameraPos: {x: camera.position.x, y: camera.position.y, z: camera.position.z},
+                cameraTarget: {x: controls.target.x, y: controls.target.y, z: controls.target.z},
+                piecePos: {x: firstMesh.position.x, y: firstMesh.position.y, z: firstMesh.position.z}
+            });
+            
+            // Test: Make first piece HUGE and bright to ensure it's visible
+            console.log('🧪 Making first piece HUGE and BRIGHT for testing...');
+            firstMesh.scale.set(50, 50, 50);  // MASSIVE
+            firstMesh.material.color.setHex(0xff0000);  // BRIGHT RED
+            firstMesh.material.emissive = new THREE.Color(0xff0000);  // Self-illuminated
+            firstMesh.material.emissiveIntensity = 0.5;
+        }
     },
     
     placeTeamPieces: function(team, w, y){
@@ -264,16 +306,6 @@ GameBoard.prototype = {
          * w: W-axis position (0-7)
          * y: Y-axis position (0-7)
          */
-        
-        // Debug: Check if classes are defined
-        console.log('Checking piece classes:', {
-            Rook: typeof window.Rook,
-            Knight: typeof window.Knight,
-            Bishop: typeof window.Bishop,
-            Queen: typeof window.Queen,
-            King: typeof window.King,
-            Pawn: typeof window.Pawn
-        });
         
         const backRank = (team === 0) ? 0 : 7;  // Z position for major pieces
         const pawnRank = (team === 0) ? 1 : 6;  // Z position for pawns
@@ -627,8 +659,16 @@ BoardGraphics.prototype = {
 		// Create mesh (without game object), add it to the scene, and return the mesh
 		const worldPos = this.boardCoordinates(x, y, z, w)
 		const material = team === 0 ? Models.materials.white : Models.materials.black
+		
 		const mesh = Models.createMesh(typeString, material, worldPos.x, worldPos.y, worldPos.z)
+		
+		if (!mesh) {
+			console.error(`❌ Models.createMesh returned null for ${typeString}`);
+			return null;
+		}
+		
 		if(team === 0) rotateObject(mesh, 0, 180, 0)
+		
 		if(addToContainer){
 			this.piecesContainer.add(mesh)
 		}
@@ -638,10 +678,12 @@ BoardGraphics.prototype = {
 	},
 	
 	setMesh: function(piece, x, y, z, w, addToContainer=true){
-//		const worldPos = this.boardCoordinates(x, y, z, w)
-//		const mesh = this.createMesh(piece.type, piece.team, worldPos.x, worldPos.y, worldPos.z, worldPos.w);
 		const mesh = this.createMesh(piece.type, piece.team, x, y, z, w, addToContainer);
-        piece.setMesh(mesh);
+        if (mesh) {
+            piece.setMesh(mesh);
+        } else {
+            console.error(`❌ Failed to create mesh for ${piece.type} at (${x},${y},${z},${w})`);
+        }
 	},
 	
 	removeMesh: function(piece){
@@ -703,7 +745,7 @@ function BoardGraphics(gameBoard) {
     this.globalLength = this.horizontalIncrement * (this.n - 1)
     this.globalHeight = this.verticalIncrement * this.n
 	this.boardHeight = 5;
-    this.EPSILON = 1
+    this.EPSILON = 1  // Small offset to place pieces just above board surface
 	
 	this.mesh = new THREE.Object3D();
 	this.boardContainer = new THREE.Object3D();
@@ -721,7 +763,7 @@ function BoardGraphics(gameBoard) {
 	let left = 0;
 	for (let w = 0; w < this.n; w++){
 		for(let i = 0; i < this.n; i++){
-			let checker = BoardGraphics.checkerboard3d(this.n, this.n * this.squareSize, z=i, w, opacity=0.4, this.boardHeight) // Construct 2D checkerboard planes
+			let checker = BoardGraphics.checkerboard3d(this.n, this.n * this.squareSize, z=i, w, opacity=0.8, this.boardHeight) // Construct 2D checkerboard planes
 			checker.position.set(0, bottom + i*this.verticalIncrement, left - w*this.horizontalIncrement)
 			rotateObject(checker, -90, 0, 0)
 			this.boardContainer.add(checker)
