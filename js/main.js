@@ -552,7 +552,8 @@ function setupThreeJS() {
     renderer.setSize(window.innerWidth - 560, window.innerHeight - 60); // Minus panels width
     // PERFORMANCE: Cap pixel ratio at 1.5 for better performance while maintaining quality
     // (1.5 is a good balance - looks great but much faster than 2.0 or 3.0)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    // VISUAL: Slightly increase pixel ratio for better quality (minimal performance impact)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     // Disable shadows for better performance (very expensive with 896 pieces + 4096 squares)
     renderer.shadowMap.enabled = false;
     // PERFORMANCE: Additional renderer optimizations
@@ -607,19 +608,27 @@ function setupThreeJS() {
 }
 
 function setupLights() {
-    // PERFORMANCE: Reduce number of lights while maintaining visual quality
+    // VISUAL: Optimized lighting for better piece appearance
     // Stronger ambient light for even illumination (no shadows needed)
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); // Increased to compensate
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
     scene.add(ambientLight);
     
-    // Single main directional light (removed secondary and fill for performance)
-    const mainLight = new THREE.DirectionalLight(0xffffff, 0.6); // Increased to maintain brightness
+    // Main directional light - primary light source
+    const mainLight = new THREE.DirectionalLight(0xffffff, 0.7);
     mainLight.position.set(500, 1000, 500);
     mainLight.castShadow = false; // Shadows disabled for performance
     scene.add(mainLight);
     
-    // PERFORMANCE: Removed secondary and fill lights - ambient + one directional is enough
-    // This significantly reduces lighting calculations while maintaining good visual quality
+    // VISUAL: Add subtle fill light from opposite side for depth (low intensity)
+    // This adds minimal performance cost but significantly improves piece appearance
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.2);
+    fillLight.position.set(-400, 300, -400);
+    scene.add(fillLight);
+    
+    // VISUAL: Add subtle rim light for edge definition
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.15);
+    rimLight.position.set(0, -500, 0);
+    scene.add(rimLight);
 }
 
 /* ============================================

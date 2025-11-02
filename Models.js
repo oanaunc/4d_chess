@@ -12,20 +12,22 @@ const Models = {
             flatShading: false,
             transparent: false,
             opacity: 1.0,
-            emissive: 0x000000,
-            emissiveIntensity: 0
+            // VISUAL: Subtle emissive glow for depth
+            emissive: 0x1a1f35,
+            emissiveIntensity: 0.15
         },
     
         white: {
-            // Very light lilac to harmonize with light squares (e.g. 0xccccfc)
-            color: 0xeeeefe,
+            // Darker purple-lilac to match the scene's purple theme better
+            color: 0xb8b0cc,  // Darker purple-tinted (more purple, less white)
             specular: 0x8888aa,
             shininess: 30,
             flatShading: false,
             transparent: false,
             opacity: 1.0,
-            emissive: 0x000000,
-            emissiveIntensity: 0
+            // VISUAL: Very subtle purple emissive (much reduced intensity)
+            emissive: 0x706d85,  // Darker purple glow
+            emissiveIntensity: 0.05  // Much lower - almost no glow
 
         },
     
@@ -154,10 +156,15 @@ const Models = {
             return null;
         }
         
-        // PERFORMANCE: Use MeshLambertMaterial instead of MeshPhongMaterial
-        // Lambert is cheaper (no specular highlights) but looks just as good with good lighting
-        // This maintains visual quality while improving performance
-        const meshMaterial = new THREE.MeshLambertMaterial(material);
+        // VISUAL: Use MeshStandardMaterial for better quality (PBR rendering)
+        // StandardMaterial is slightly more expensive than Lambert but provides much better visuals
+        // It's still very performant and looks professional with proper roughness/metalness
+        const enhancedMaterial = Object.assign({}, material, {
+            roughness: 0.4,  // Slightly glossy (0 = mirror, 1 = matte)
+            metalness: 0.1,  // Slightly metallic for depth
+            envMapIntensity: 0.3  // Subtle environment reflections if envMap is added
+        });
+        const meshMaterial = new THREE.MeshStandardMaterial(enhancedMaterial);
         
         // REUSE geometry instead of cloning - saves massive amounts of memory!
         // Three.js can efficiently render the same geometry multiple times with different transforms
