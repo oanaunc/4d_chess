@@ -543,13 +543,16 @@ function setupThreeJS() {
     // Create renderer
     renderer = new THREE.WebGLRenderer({
         canvas: canvas,
-        antialias: true,
-        alpha: false
+        antialias: false, // Disable antialiasing for better performance
+        alpha: false,
+        powerPreference: "high-performance" // Prefer performance over quality
     });
     renderer.setSize(window.innerWidth - 560, window.innerHeight - 60); // Minus panels width
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // Limit pixel ratio to 2 for better performance (retina displays)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Disable shadows for better performance (very expensive with 896 pieces + 4096 squares)
+    renderer.shadowMap.enabled = false;
+    // renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     
     // Add orbit controls (CAD-style)
     controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -582,7 +585,8 @@ function setupThreeJS() {
     setupLights();
     
     // Add grid helper (position will be adjusted after board is created)
-    const gridHelper = new THREE.GridHelper(4000, 80, 0x444464, 0x1e2746);
+    // Reduced grid size and divisions for better performance
+    const gridHelper = new THREE.GridHelper(4000, 40, 0x444464, 0x1e2746); // Reduced from 80 to 40 divisions
     gridHelper.position.set(0, 0, 0);
     scene.add(gridHelper);
     
@@ -597,30 +601,23 @@ function setupThreeJS() {
 
 function setupLights() {
     // Stronger ambient light for even illumination of matte materials
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.75); // Increased for better visibility without shadows
     scene.add(ambientLight);
     
     // Softer main directional light to reduce harsh reflections
-    const mainLight = new THREE.DirectionalLight(0xffffff, 0.45);
+    const mainLight = new THREE.DirectionalLight(0xffffff, 0.5); // Slightly increased since shadows are off
     mainLight.position.set(500, 1000, 500);
-    mainLight.castShadow = true;
-    mainLight.shadow.mapSize.width = 2048;
-    mainLight.shadow.mapSize.height = 2048;
-    mainLight.shadow.camera.near = 100;
-    mainLight.shadow.camera.far = 2000;
-    mainLight.shadow.camera.left = -1000;
-    mainLight.shadow.camera.right = 1000;
-    mainLight.shadow.camera.top = 1000;
-    mainLight.shadow.camera.bottom = -1000;
+    // Shadows disabled for performance
+    mainLight.castShadow = false;
     scene.add(mainLight);
     
     // Softer secondary light (no blue tint for cleaner colors)
-    const secondaryLight = new THREE.DirectionalLight(0xffffff, 0.2);
+    const secondaryLight = new THREE.DirectionalLight(0xffffff, 0.25); // Slightly increased
     secondaryLight.position.set(-500, 500, -500);
     scene.add(secondaryLight);
     
     // Fill light from below to reduce shadows
-    const fillLight = new THREE.DirectionalLight(0xffffff, 0.15);
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.2); // Slightly increased
     fillLight.position.set(0, -500, 0);
     scene.add(fillLight);
 }
@@ -1460,17 +1457,31 @@ function drawAxisWithArrow(ctx, x1, y1, dx, dy, color, label, arrowSize) {
    ANIMATION LOOP
    ============================================ */
 
+// Performance optimization: Throttle expensive operations
+let lastHoverUpdate = 0;
+let lastGizmoUpdate = 0;
+const HOVER_UPDATE_INTERVAL = 100; // Update hover every 100ms (10 FPS)
+const GIZMO_UPDATE_INTERVAL = 50; // Update gizmo every 50ms (20 FPS)
+
 function animate() {
     requestAnimationFrame(animate);
+    
+    const now = performance.now();
     
     // Update controls
     controls.update();
     
-    // Update raycasting for piece selection (hover)
-    updatePieceHover();
+    // Throttle raycasting for piece selection (hover) - only update every 100ms
+    if (now - lastHoverUpdate >= HOVER_UPDATE_INTERVAL) {
+        updatePieceHover();
+        lastHoverUpdate = now;
+    }
     
-    // Update 2D gizmo visualization
-    update2DGizmo();
+    // Throttle 2D gizmo visualization - only update every 50ms
+    if (now - lastGizmoUpdate >= GIZMO_UPDATE_INTERVAL) {
+        update2DGizmo();
+        lastGizmoUpdate = now;
+    }
     
     // Process animation queue (piece movements)
     if (typeof Animation !== 'undefined' && Animation.processQueue) {
@@ -1497,7 +1508,8 @@ function updatePieceHover() {
         currentTeam = moveManager.whoseTurn();
     }
     
-    // Get all selectable pieces (only from current team)
+    // PERFORMANCE: Get all selectable pieces (only from current team)
+    // Skip expensive frustum culling - Three.js handles this automatically during rendering
     const pieces = gameBoard.graphics.piecesContainer.children.filter(p => {
         if (!p.canRayCast) return false;
         if (p.selectable === false) return false;
@@ -1515,11 +1527,22 @@ function updatePieceHover() {
         return true;
     });
     
-    if (pieces.length === 0) return;
+    if (pieces.length === 0) {
+        // Unhighlight if no pieces are available
+        if (selectionSystem.hoveredPiece) {
+            selectionSystem.unhighlight(selectionSystem.hoveredPiece);
+            selectionSystem.hoveredPiece = null;
+        }
+        return;
+    }
+    
+    // PERFORMANCE: Limit number of pieces to raycast (max 100 pieces for hover)
+    // This prevents expensive raycasting when there are many pieces on screen
+    const piecesToRaycast = pieces.length > 100 ? pieces.slice(0, 100) : pieces;
     
     // Update raycasting
     selectionSystem.raycaster.setFromCamera(selectionSystem.mouse, camera);
-    const intersects = selectionSystem.raycaster.intersectObjects(pieces);
+    const intersects = selectionSystem.raycaster.intersectObjects(piecesToRaycast);
     
     // Get closest intersection
     const closest = intersects.length > 0 ? intersects[0].object : null;

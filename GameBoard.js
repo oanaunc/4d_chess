@@ -1258,7 +1258,9 @@ BoardGraphics.checkerboard3d = function(segments=8, boardSize=100, z=0, w=0, opa
 			
 			// Create a box for this square
 			const geometry = new THREE.BoxGeometry(squareSize, squareSize, BOARD_HEIGHT);
-			const material = new THREE.MeshPhongMaterial({
+			// Use MeshBasicMaterial instead of MeshPhongMaterial for better performance
+			// (no lighting calculations needed, which is fine since we have good ambient light)
+			const material = new THREE.MeshBasicMaterial({
 				color: color,
 				transparent: true,
 				opacity: opacity,

@@ -168,8 +168,9 @@ const Models = {
         
         mesh.position.set(0, 0, 0);
         mesh.rotation.set(pieceData.rotation.x, pieceData.rotation.y, pieceData.rotation.z);
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
+        // Shadows disabled for performance
+        mesh.castShadow = false;
+        mesh.receiveShadow = false;
 
 		mesh.scale.set(Models.SCALE_FACTOR, Models.SCALE_FACTOR, Models.SCALE_FACTOR)
 		const height = new THREE.Box3().setFromObject(mesh).max.y;
