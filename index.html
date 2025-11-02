@@ -188,6 +188,78 @@
         <main class="game-view">
             <canvas id="game-canvas"></canvas>
             
+            <!-- Navigation Controls Overlay -->
+            <div class="nav-controls-overlay" id="nav-controls-overlay">
+                <!-- Freeze/Lock Button -->
+                <button class="nav-btn nav-btn-freeze" id="nav-freeze" title="Freeze/Unfreeze Camera">
+                    <span class="nav-label">Freeze</span>
+                </button>
+                
+                <!-- Directional Pan Controls (Arrow Pad) -->
+                <div class="nav-control-group nav-pad-group">
+                    <div class="nav-group-label">Pan</div>
+                    <div class="nav-pad-row">
+                        <button class="nav-btn nav-btn-arrow" id="nav-up" title="Pan Up">
+                            <span class="nav-icon">↑</span>
+                        </button>
+                    </div>
+                    <div class="nav-pad-row">
+                        <button class="nav-btn nav-btn-arrow" id="nav-left" title="Pan Left">
+                            <span class="nav-icon">←</span>
+                        </button>
+                        <button class="nav-btn nav-btn-center" id="nav-reset-view" title="Reset View">
+                            <span class="nav-icon">◎</span>
+                        </button>
+                        <button class="nav-btn nav-btn-arrow" id="nav-right" title="Pan Right">
+                            <span class="nav-icon">→</span>
+                        </button>
+                    </div>
+                    <div class="nav-pad-row">
+                        <button class="nav-btn nav-btn-arrow" id="nav-down" title="Pan Down">
+                            <span class="nav-icon">↓</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Zoom Controls -->
+                <div class="nav-control-group nav-zoom-group">
+                    <button class="nav-btn nav-btn-zoom" id="nav-zoom-in" title="Zoom In">
+                        <span class="nav-icon">+</span>
+                        <span class="nav-label">Zoom</span>
+                    </button>
+                    <button class="nav-btn nav-btn-zoom" id="nav-zoom-out" title="Zoom Out">
+                        <span class="nav-icon">−</span>
+                        <span class="nav-label">Zoom</span>
+                    </button>
+                </div>
+                
+                <!-- Rotation Controls (Sphere Navigation) -->
+                <div class="nav-control-group nav-rotate-group">
+                    <div class="nav-group-label">Rotate</div>
+                    <div class="nav-rotate-row">
+                        <button class="nav-btn nav-btn-rotate" id="nav-rotate-up" title="Rotate Up">
+                            <span class="nav-icon">↿</span>
+                        </button>
+                    </div>
+                    <div class="nav-rotate-row">
+                        <button class="nav-btn nav-btn-rotate" id="nav-rotate-left" title="Rotate Left">
+                            <span class="nav-icon">↼</span>
+                        </button>
+                        <button class="nav-btn nav-btn-center-small" id="nav-reset-rotate" title="Reset View">
+                            <span class="nav-icon">◉</span>
+                        </button>
+                        <button class="nav-btn nav-btn-rotate" id="nav-rotate-right" title="Rotate Right">
+                            <span class="nav-icon">⇀</span>
+                        </button>
+                    </div>
+                    <div class="nav-rotate-row">
+                        <button class="nav-btn nav-btn-rotate" id="nav-rotate-down" title="Rotate Down">
+                            <span class="nav-icon">⇂</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Loading Screen -->
             <div class="loading-screen" id="loading-screen">
                 <div class="loading-content">

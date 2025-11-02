@@ -623,6 +623,177 @@ function setupLights() {
 }
 
 /* ============================================
+   NAVIGATION CONTROLS SETUP
+   ============================================ */
+
+function setupNavigationControls() {
+    if (!controls) {
+        console.warn('⚠️ Controls not initialized yet, cannot setup navigation controls');
+        return;
+    }
+    
+    // Freeze/Unfreeze button
+    const freezeBtn = document.getElementById('nav-freeze');
+    if (freezeBtn) {
+        let isFrozen = false;
+        freezeBtn.addEventListener('click', () => {
+            isFrozen = !isFrozen;
+            controls.enabled = !isFrozen;
+            freezeBtn.classList.toggle('frozen', isFrozen);
+            freezeBtn.querySelector('.nav-label').textContent = isFrozen ? 'Unfreeze' : 'Freeze';
+            
+            // If unfreezing, stop any ongoing rotation
+            if (!isFrozen) {
+                controls.enableDamping = true;
+            } else {
+                controls.enableDamping = false;
+                controls.update();
+            }
+        });
+    }
+    
+    // Pan controls (directional arrows)
+    const panSpeed = 50; // Pan distance per click
+    
+    const setupPanButton = (id, direction) => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.addEventListener('click', () => {
+                if (controls && controls.enabled) {
+                    // Use OrbitControls pan method for proper screen-space panning
+                    const panVector = new THREE.Vector3();
+                    
+                    switch(direction) {
+                        case 'up':
+                            panVector.set(0, panSpeed, 0);
+                            break;
+                        case 'down':
+                            panVector.set(0, -panSpeed, 0);
+                            break;
+                        case 'left':
+                            panVector.set(-panSpeed, 0, 0);
+                            break;
+                        case 'right':
+                            panVector.set(panSpeed, 0, 0);
+                            break;
+                    }
+                    
+                    // Pan in camera's local space (screen space)
+                    panVector.applyQuaternion(camera.quaternion);
+                    controls.target.add(panVector);
+                    camera.position.add(panVector);
+                    controls.update();
+                }
+            });
+        }
+    };
+    
+    setupPanButton('nav-up', 'up');
+    setupPanButton('nav-down', 'down');
+    setupPanButton('nav-left', 'left');
+    setupPanButton('nav-right', 'right');
+    
+    // Reset view function
+    const resetView = () => {
+        if (gameBoard && gameBoard.graphics) {
+            const boardCenter = gameBoard.graphics.getCenter();
+            const newCameraPos = {
+                x: 800,
+                y: 600,
+                z: boardCenter.z + 800
+            };
+            
+            camera.position.set(newCameraPos.x, newCameraPos.y, newCameraPos.z);
+            controls.target.set(boardCenter.x, boardCenter.y, boardCenter.z);
+            controls.update();
+        }
+    };
+    
+    // Reset view button (in pan controls)
+    const resetBtn = document.getElementById('nav-reset-view');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', resetView);
+    }
+    
+    // Reset view button (in rotate controls)
+    const resetRotateBtn = document.getElementById('nav-reset-rotate');
+    if (resetRotateBtn) {
+        resetRotateBtn.addEventListener('click', resetView);
+    }
+    
+    // Zoom controls
+    const zoomAmount = 100; // Zoom distance per click
+    
+    const zoomInBtn = document.getElementById('nav-zoom-in');
+    if (zoomInBtn) {
+        zoomInBtn.addEventListener('click', () => {
+            if (controls && controls.enabled) {
+                const direction = new THREE.Vector3(0, 0, -1);
+                direction.applyQuaternion(camera.quaternion);
+                camera.position.add(direction.multiplyScalar(zoomAmount));
+                controls.update();
+            }
+        });
+    }
+    
+    const zoomOutBtn = document.getElementById('nav-zoom-out');
+    if (zoomOutBtn) {
+        zoomOutBtn.addEventListener('click', () => {
+            if (controls && controls.enabled) {
+                const direction = new THREE.Vector3(0, 0, 1);
+                direction.applyQuaternion(camera.quaternion);
+                camera.position.add(direction.multiplyScalar(zoomAmount));
+                controls.update();
+            }
+        });
+    }
+    
+    // Rotation controls (sphere navigation)
+    const rotationAmount = Math.PI / 12; // 15 degrees
+    
+    const setupRotationButton = (id, rotationType) => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.addEventListener('click', () => {
+                if (controls && controls.enabled) {
+                    const spherical = new THREE.Spherical();
+                    spherical.setFromVector3(camera.position.clone().sub(controls.target));
+                    
+                    switch(rotationType) {
+                        case 'left':
+                            spherical.theta -= rotationAmount;
+                            break;
+                        case 'right':
+                            spherical.theta += rotationAmount;
+                            break;
+                        case 'up':
+                            spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi - rotationAmount));
+                            break;
+                        case 'down':
+                            spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi + rotationAmount));
+                            break;
+                    }
+                    
+                    const newPosition = new THREE.Vector3();
+                    newPosition.setFromSpherical(spherical);
+                    newPosition.add(controls.target);
+                    camera.position.copy(newPosition);
+                    camera.lookAt(controls.target);
+                    controls.update();
+                }
+            });
+        }
+    };
+    
+    setupRotationButton('nav-rotate-left', 'left');
+    setupRotationButton('nav-rotate-right', 'right');
+    setupRotationButton('nav-rotate-up', 'up');
+    setupRotationButton('nav-rotate-down', 'down');
+    
+    console.log('✅ Navigation controls setup complete');
+}
+
+/* ============================================
    GAME INITIALIZATION
    ============================================ */
 
@@ -705,6 +876,9 @@ function initializeGame() {
                     if (window.gridHelper) {
                         window.gridHelper.position.set(boardCenter.x, 0, boardCenter.z);
                     }
+                    
+                    // Setup navigation controls (after camera is positioned)
+                    setupNavigationControls();
                     
                     setTimeout(() => {
                         updateLoadingText('Ready!');
