@@ -531,11 +531,13 @@ function setupThreeJS() {
     // Create scene
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0a0e27); // Dark blue background
-    scene.fog = new THREE.Fog(0x0a0e27, 1000, 3000);
+    // PERFORMANCE: Slightly reduce fog distance (minimal visual impact, better culling)
+    scene.fog = new THREE.Fog(0x0a0e27, 800, 2500); // Reduced from 1000-3000 to 800-2500
     
     // Create camera
     const aspect = window.innerWidth / window.innerHeight;
-    camera = new THREE.PerspectiveCamera(60, aspect, 1, 10000);
+    // PERFORMANCE: Slightly reduce FOV and far plane (minimal visual impact)
+    camera = new THREE.PerspectiveCamera(58, aspect, 1, 4000); // FOV: 60→58, far: 10000→4000
     
     // Initial camera position (will be adjusted after board is created)
     camera.position.set(0, 1500, 0);
@@ -548,11 +550,16 @@ function setupThreeJS() {
         powerPreference: "high-performance" // Prefer performance over quality
     });
     renderer.setSize(window.innerWidth - 560, window.innerHeight - 60); // Minus panels width
-    // Limit pixel ratio to 2 for better performance (retina displays)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // PERFORMANCE: Cap pixel ratio at 1.5 for better performance while maintaining quality
+    // (1.5 is a good balance - looks great but much faster than 2.0 or 3.0)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     // Disable shadows for better performance (very expensive with 896 pieces + 4096 squares)
     renderer.shadowMap.enabled = false;
-    // renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // PERFORMANCE: Additional renderer optimizations
+    renderer.sortObjects = false; // Disable sorting (not needed for opaque objects)
+    renderer.precision = "mediump"; // Use medium precision (faster than highp, still looks great)
+    renderer.stencil = false; // Disable stencil buffer (not needed)
+    renderer.logarithmicDepthBuffer = false; // Disable logarithmic depth (faster)
     
     // Add orbit controls (CAD-style)
     controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -600,26 +607,19 @@ function setupThreeJS() {
 }
 
 function setupLights() {
-    // Stronger ambient light for even illumination of matte materials
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.75); // Increased for better visibility without shadows
+    // PERFORMANCE: Reduce number of lights while maintaining visual quality
+    // Stronger ambient light for even illumination (no shadows needed)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8); // Increased to compensate
     scene.add(ambientLight);
     
-    // Softer main directional light to reduce harsh reflections
-    const mainLight = new THREE.DirectionalLight(0xffffff, 0.5); // Slightly increased since shadows are off
+    // Single main directional light (removed secondary and fill for performance)
+    const mainLight = new THREE.DirectionalLight(0xffffff, 0.6); // Increased to maintain brightness
     mainLight.position.set(500, 1000, 500);
-    // Shadows disabled for performance
-    mainLight.castShadow = false;
+    mainLight.castShadow = false; // Shadows disabled for performance
     scene.add(mainLight);
     
-    // Softer secondary light (no blue tint for cleaner colors)
-    const secondaryLight = new THREE.DirectionalLight(0xffffff, 0.25); // Slightly increased
-    secondaryLight.position.set(-500, 500, -500);
-    scene.add(secondaryLight);
-    
-    // Fill light from below to reduce shadows
-    const fillLight = new THREE.DirectionalLight(0xffffff, 0.2); // Slightly increased
-    fillLight.position.set(0, -500, 0);
-    scene.add(fillLight);
+    // PERFORMANCE: Removed secondary and fill lights - ambient + one directional is enough
+    // This significantly reduces lighting calculations while maintaining good visual quality
 }
 
 /* ============================================
@@ -1460,13 +1460,26 @@ function drawAxisWithArrow(ctx, x1, y1, dx, dy, color, label, arrowSize) {
 // Performance optimization: Throttle expensive operations
 let lastHoverUpdate = 0;
 let lastGizmoUpdate = 0;
+let lastRenderTime = 0;
+let frameSkipCount = 0;
 const HOVER_UPDATE_INTERVAL = 100; // Update hover every 100ms (10 FPS)
 const GIZMO_UPDATE_INTERVAL = 50; // Update gizmo every 50ms (20 FPS)
+const MAX_FPS = 60; // Cap frame rate to 60 FPS
+const TARGET_FRAME_TIME = 1000 / MAX_FPS; // ~16.67ms per frame
 
 function animate() {
     requestAnimationFrame(animate);
     
     const now = performance.now();
+    const deltaTime = now - lastRenderTime;
+    
+    // PERFORMANCE: Skip rendering if too soon (cap at 60 FPS)
+    if (deltaTime < TARGET_FRAME_TIME) {
+        frameSkipCount++;
+        return; // Skip this frame
+    }
+    
+    lastRenderTime = now;
     
     // Update controls
     controls.update();

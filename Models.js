@@ -154,8 +154,10 @@ const Models = {
             return null;
         }
         
-        // Create material with proper properties
-        const meshMaterial = new THREE.MeshPhongMaterial(material);
+        // PERFORMANCE: Use MeshLambertMaterial instead of MeshPhongMaterial
+        // Lambert is cheaper (no specular highlights) but looks just as good with good lighting
+        // This maintains visual quality while improving performance
+        const meshMaterial = new THREE.MeshLambertMaterial(material);
         
         // REUSE geometry instead of cloning - saves massive amounts of memory!
         // Three.js can efficiently render the same geometry multiple times with different transforms

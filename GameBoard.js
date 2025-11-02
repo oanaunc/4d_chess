@@ -1246,36 +1246,156 @@ BoardGraphics.checkerboard3d = function(segments=8, boardSize=100, z=0, w=0, opa
 	const BOARD_HEIGHT = boardHeight;
 	const squareSize = boardSize / segments;
 	
-	// Create a container for all board squares
-	let boardContainer = new THREE.Group();
+	// PERFORMANCE: Merge all squares of the same color into single meshes
+	// Reduces draw calls from 64 per board to 2 per board (massive performance gain, zero visual change)
+	const lightColor = 0xccccfc;
+	const darkColor = 0x444464;
 	
-	// Create individual squares in a checkerboard pattern
+	// Collect geometries for each color
+	const lightGeometries = [];
+	const darkGeometries = [];
+	
 	for(let x = 0; x < segments; x++){
 		for(let y = 0; y < segments; y++){
 			// Determine color based on checkerboard pattern
 			const isLight = (x + y + z + w) % 2 === 0;
-			const color = isLight ? 0xccccfc : 0x444464;
 			
-			// Create a box for this square
+			// Create geometry for this square
 			const geometry = new THREE.BoxGeometry(squareSize, squareSize, BOARD_HEIGHT);
-			// Use MeshBasicMaterial instead of MeshPhongMaterial for better performance
-			// (no lighting calculations needed, which is fine since we have good ambient light)
-			const material = new THREE.MeshBasicMaterial({
-				color: color,
-				transparent: true,
-				opacity: opacity,
-				side: THREE.DoubleSide
-			});
 			
-			const square = new THREE.Mesh(geometry, material);
-			
-			// Position the square
+			// Position the geometry
 			const offsetX = (x - segments/2 + 0.5) * squareSize;
 			const offsetY = (y - segments/2 + 0.5) * squareSize;
-			square.position.set(offsetX, offsetY, -BOARD_HEIGHT/2);
+			geometry.translate(offsetX, offsetY, -BOARD_HEIGHT/2);
 			
-			boardContainer.add(square);
+			// Add to appropriate collection
+			if (isLight) {
+				lightGeometries.push(geometry);
+			} else {
+				darkGeometries.push(geometry);
+			}
 		}
+	}
+	
+	// Create a container for the merged meshes
+	let boardContainer = new THREE.Group();
+	
+	// Merge and create meshes for each color
+	if (lightGeometries.length > 0) {
+		// Try to use BufferGeometryUtils if available, otherwise manually merge
+		let mergedLightGeometry;
+		if (typeof THREE.BufferGeometryUtils !== 'undefined' && THREE.BufferGeometryUtils.mergeGeometries) {
+			mergedLightGeometry = THREE.BufferGeometryUtils.mergeGeometries(lightGeometries);
+		} else {
+			// Manual merge fallback - properly merge geometries
+			mergedLightGeometry = new THREE.BufferGeometry();
+			const positions = [];
+			const normals = [];
+			const uvs = [];
+			const indices = [];
+			let vertexOffset = 0;
+			
+			lightGeometries.forEach(geom => {
+				const pos = geom.attributes.position;
+				const norm = geom.attributes.normal;
+				const uv = geom.attributes.uv;
+				
+				// Add vertices
+				for (let i = 0; i < pos.count; i++) {
+					positions.push(pos.getX(i), pos.getY(i), pos.getZ(i));
+					if (norm) normals.push(norm.getX(i), norm.getY(i), norm.getZ(i));
+					if (uv) uvs.push(uv.getX(i), uv.getY(i));
+				}
+				
+				// Add indices with offset
+				const geomIndices = geom.index;
+				if (geomIndices) {
+					const indexArray = geomIndices.array;
+					for (let i = 0; i < geomIndices.count; i++) {
+						indices.push(vertexOffset + indexArray[i]);
+					}
+				} else {
+					// If no index, add sequential indices
+					for (let i = 0; i < pos.count; i++) {
+						indices.push(vertexOffset + i);
+					}
+				}
+				vertexOffset += pos.count;
+			});
+			
+			mergedLightGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+			if (normals.length > 0) mergedLightGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+			if (uvs.length > 0) mergedLightGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+			mergedLightGeometry.setIndex(indices);
+		}
+		
+		const lightMaterial = new THREE.MeshBasicMaterial({
+			color: lightColor,
+			transparent: true,
+			opacity: opacity,
+			side: THREE.DoubleSide
+		});
+		
+		const lightMesh = new THREE.Mesh(mergedLightGeometry, lightMaterial);
+		boardContainer.add(lightMesh);
+	}
+	
+	if (darkGeometries.length > 0) {
+		let mergedDarkGeometry;
+		if (typeof THREE.BufferGeometryUtils !== 'undefined' && THREE.BufferGeometryUtils.mergeGeometries) {
+			mergedDarkGeometry = THREE.BufferGeometryUtils.mergeGeometries(darkGeometries);
+		} else {
+			// Manual merge fallback - properly merge geometries
+			mergedDarkGeometry = new THREE.BufferGeometry();
+			const positions = [];
+			const normals = [];
+			const uvs = [];
+			const indices = [];
+			let vertexOffset = 0;
+			
+			darkGeometries.forEach(geom => {
+				const pos = geom.attributes.position;
+				const norm = geom.attributes.normal;
+				const uv = geom.attributes.uv;
+				
+				// Add vertices
+				for (let i = 0; i < pos.count; i++) {
+					positions.push(pos.getX(i), pos.getY(i), pos.getZ(i));
+					if (norm) normals.push(norm.getX(i), norm.getY(i), norm.getZ(i));
+					if (uv) uvs.push(uv.getX(i), uv.getY(i));
+				}
+				
+				// Add indices with offset
+				const geomIndices = geom.index;
+				if (geomIndices) {
+					const indexArray = geomIndices.array;
+					for (let i = 0; i < geomIndices.count; i++) {
+						indices.push(vertexOffset + indexArray[i]);
+					}
+				} else {
+					// If no index, add sequential indices
+					for (let i = 0; i < pos.count; i++) {
+						indices.push(vertexOffset + i);
+					}
+				}
+				vertexOffset += pos.count;
+			});
+			
+			mergedDarkGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+			if (normals.length > 0) mergedDarkGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+			if (uvs.length > 0) mergedDarkGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+			mergedDarkGeometry.setIndex(indices);
+		}
+		
+		const darkMaterial = new THREE.MeshBasicMaterial({
+			color: darkColor,
+			transparent: true,
+			opacity: opacity,
+			side: THREE.DoubleSide
+		});
+		
+		const darkMesh = new THREE.Mesh(mergedDarkGeometry, darkMaterial);
+		boardContainer.add(darkMesh);
 	}
 	
 	return boardContainer;
