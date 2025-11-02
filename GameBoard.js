@@ -1252,6 +1252,10 @@ BoardGraphics.checkerboard3d = function(segments=8, boardSize=100, z=0, w=0, opa
 	
 	const BOARD_HEIGHT = boardHeight;
 	const squareSize = boardSize / segments;
+	// VISUAL: Add small gap between squares to prevent overlapping intersections and flickering
+	// This creates a subtle gap that eliminates z-fighting issues
+	const GAP_SIZE = 0.5; // Small gap in world units (adjustable)
+	const adjustedSquareSize = squareSize - (GAP_SIZE * 2); // Reduce square size to create gaps
 	
 	// PERFORMANCE: Merge all squares of the same color into single meshes
 	// Reduces draw calls from 64 per board to 2 per board (massive performance gain, zero visual change)
@@ -1284,14 +1288,9 @@ BoardGraphics.checkerboard3d = function(segments=8, boardSize=100, z=0, w=0, opa
 	
 	// PERFORMANCE: Cache base geometry per size to avoid recreating identical geometries
 	// Only create new geometry if size doesn't match cached version
-	const geometryKey = `${squareSize}_${BOARD_HEIGHT}`;
 	if (!BoardGraphics._baseGeometries) {
 		BoardGraphics._baseGeometries = {};
 	}
-	if (!BoardGraphics._baseGeometries[geometryKey]) {
-		BoardGraphics._baseGeometries[geometryKey] = new THREE.BoxGeometry(squareSize, squareSize, BOARD_HEIGHT);
-	}
-	const baseGeometry = BoardGraphics._baseGeometries[geometryKey];
 	
 	// Collect geometries for each color
 	const lightGeometries = [];
@@ -1304,9 +1303,15 @@ BoardGraphics.checkerboard3d = function(segments=8, boardSize=100, z=0, w=0, opa
 			
 			// PERFORMANCE: Clone cached base geometry instead of creating new one
 			// Cloning is much faster than creating a new BoxGeometry
-			const geometry = baseGeometry.clone();
+			// VISUAL: Use adjusted square size to create gaps and prevent overlapping intersections
+			const gapGeometryKey = `${adjustedSquareSize}_${BOARD_HEIGHT}`;
+			if (!BoardGraphics._baseGeometries[gapGeometryKey]) {
+				// Create geometry with gap-adjusted size if not cached
+				BoardGraphics._baseGeometries[gapGeometryKey] = new THREE.BoxGeometry(adjustedSquareSize, adjustedSquareSize, BOARD_HEIGHT);
+			}
+			const geometry = BoardGraphics._baseGeometries[gapGeometryKey].clone();
 			
-			// Position the geometry
+			// Position the geometry with original spacing (gaps will be created by smaller size)
 			const offsetX = (x - segments/2 + 0.5) * squareSize;
 			const offsetY = (y - segments/2 + 0.5) * squareSize;
 			geometry.translate(offsetX, offsetY, -BOARD_HEIGHT/2);
