@@ -820,10 +820,10 @@ function initializeGame() {
             
             // Wait a bit for board to render
             setTimeout(() => {
-                updateLoadingText('Placing 256 chess pieces...');
+                updateLoadingText('Placing 896 chess pieces...');
                 console.log('♟️ Placing pieces...');
                 
-                // Initialize starting positions (256 pieces: 128 white + 128 black)
+                // Initialize starting positions (896 pieces: 448 white + 448 black)
                 gameBoard.initializeStartingPositions();
                 
                 setTimeout(() => {
@@ -896,7 +896,7 @@ function initializeGame() {
                         setTimeout(() => {
                             loadingScreen.style.display = 'none';
                             console.log('✅ 4D Chess is ready to play!');
-                            console.log('📊 Total pieces: 256 (128 white + 128 black)');
+                            console.log('📊 Total pieces: 896 (448 white + 448 black)');
                             
                             // Initialize tutorial system now that models are loaded
                             if (typeof initTutorial === 'function') {
