@@ -1016,12 +1016,19 @@ function BoardGraphics(gameBoard) {
 	
 	let bottom = 0;
 	let left = 0;
+	
+	// PERFORMANCE: Store board references for potential distance-based culling later
+	if (!this.boardRefs) {
+		this.boardRefs = [];
+	}
+	
 	for (let w = 0; w < this.n; w++){
 		for(let i = 0; i < this.n; i++){
 			let checker = BoardGraphics.checkerboard3d(this.n, this.n * this.squareSize, z=i, w, opacity=0.8, this.boardHeight) // Construct 2D checkerboard planes
 			checker.position.set(0, bottom + i*this.verticalIncrement, left - w*this.horizontalIncrement)
 			rotateObject(checker, -90, 0, 0)
 			this.boardContainer.add(checker)
+			this.boardRefs.push(checker); // Store for potential culling optimizations
 			
 			// Log first board (y=0, w=0) square positions
 			if (i === 0 && w === 0) {
@@ -1251,6 +1258,41 @@ BoardGraphics.checkerboard3d = function(segments=8, boardSize=100, z=0, w=0, opa
 	const lightColor = 0xccccfc;
 	const darkColor = 0x444464;
 	
+	// PERFORMANCE: Cache materials to reuse across all boards (only 2 materials needed total)
+	// This reduces WebGL state changes significantly
+	if (!BoardGraphics._cachedMaterials) {
+		BoardGraphics._cachedMaterials = {};
+	}
+	const materialKey = `${opacity}`;
+	if (!BoardGraphics._cachedMaterials[materialKey]) {
+		BoardGraphics._cachedMaterials[materialKey] = {
+			light: new THREE.MeshBasicMaterial({
+				color: lightColor,
+				transparent: true,
+				opacity: opacity,
+				side: THREE.DoubleSide
+			}),
+			dark: new THREE.MeshBasicMaterial({
+				color: darkColor,
+				transparent: true,
+				opacity: opacity,
+				side: THREE.DoubleSide
+			})
+		};
+	}
+	const materials = BoardGraphics._cachedMaterials[materialKey];
+	
+	// PERFORMANCE: Cache base geometry per size to avoid recreating identical geometries
+	// Only create new geometry if size doesn't match cached version
+	const geometryKey = `${squareSize}_${BOARD_HEIGHT}`;
+	if (!BoardGraphics._baseGeometries) {
+		BoardGraphics._baseGeometries = {};
+	}
+	if (!BoardGraphics._baseGeometries[geometryKey]) {
+		BoardGraphics._baseGeometries[geometryKey] = new THREE.BoxGeometry(squareSize, squareSize, BOARD_HEIGHT);
+	}
+	const baseGeometry = BoardGraphics._baseGeometries[geometryKey];
+	
 	// Collect geometries for each color
 	const lightGeometries = [];
 	const darkGeometries = [];
@@ -1260,8 +1302,9 @@ BoardGraphics.checkerboard3d = function(segments=8, boardSize=100, z=0, w=0, opa
 			// Determine color based on checkerboard pattern
 			const isLight = (x + y + z + w) % 2 === 0;
 			
-			// Create geometry for this square
-			const geometry = new THREE.BoxGeometry(squareSize, squareSize, BOARD_HEIGHT);
+			// PERFORMANCE: Clone cached base geometry instead of creating new one
+			// Cloning is much faster than creating a new BoxGeometry
+			const geometry = baseGeometry.clone();
 			
 			// Position the geometry
 			const offsetX = (x - segments/2 + 0.5) * squareSize;
@@ -1329,14 +1372,8 @@ BoardGraphics.checkerboard3d = function(segments=8, boardSize=100, z=0, w=0, opa
 			mergedLightGeometry.setIndex(indices);
 		}
 		
-		const lightMaterial = new THREE.MeshBasicMaterial({
-			color: lightColor,
-			transparent: true,
-			opacity: opacity,
-			side: THREE.DoubleSide
-		});
-		
-		const lightMesh = new THREE.Mesh(mergedLightGeometry, lightMaterial);
+		// PERFORMANCE: Use cached material instead of creating new one
+		const lightMesh = new THREE.Mesh(mergedLightGeometry, materials.light);
 		boardContainer.add(lightMesh);
 	}
 	
@@ -1387,14 +1424,8 @@ BoardGraphics.checkerboard3d = function(segments=8, boardSize=100, z=0, w=0, opa
 			mergedDarkGeometry.setIndex(indices);
 		}
 		
-		const darkMaterial = new THREE.MeshBasicMaterial({
-			color: darkColor,
-			transparent: true,
-			opacity: opacity,
-			side: THREE.DoubleSide
-		});
-		
-		const darkMesh = new THREE.Mesh(mergedDarkGeometry, darkMaterial);
+		// PERFORMANCE: Use cached material instead of creating new one
+		const darkMesh = new THREE.Mesh(mergedDarkGeometry, materials.dark);
 		boardContainer.add(darkMesh);
 	}
 	
